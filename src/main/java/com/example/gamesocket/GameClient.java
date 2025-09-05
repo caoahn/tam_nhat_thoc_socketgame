@@ -143,9 +143,7 @@ public class GameClient extends Application {
 
         // Buttons
         Button leaderboardButton = new Button("Bảng xếp hạng");
-        leaderboardButton.setOnAction(e -> {
-            sendMessage("GET_LEADERBOARD");
-        });
+        leaderboardButton.setOnAction(e -> sendMessage("GET_LEADERBOARD"));
 
         Button logoutButton = new Button("Đăng xuất");
         logoutButton.setOnAction(e -> {
@@ -207,8 +205,19 @@ public class GameClient extends Application {
 
         Button quitButton = new Button("Thoát game");
         quitButton.setOnAction(e -> {
-            sendMessage("QUIT_GAME");
-            backToMainMenu();
+            // Hiển thị xác nhận trước khi thoát
+            Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmAlert.setTitle("Xác nhận thoát");
+            confirmAlert.setHeaderText("Bạn có chắc muốn thoát game?");
+            confirmAlert.setContentText("Nếu thoát bây giờ, bạn sẽ thua cuộc!");
+
+            Optional<ButtonType> result = confirmAlert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                sendMessage("QUIT_GAME");
+                // Hiển thị thông báo thua cuộc khi thoát chủ động
+                showGameEndDialog("Thua cuộc",
+                        "Bạn đã thoát game giữa chừng!\nKết quả: Thua cuộc", false);
+            }
         });
 
         gamePlayPane.getChildren().addAll(gameInfoLabel, infoBox, grainGrid, quitButton);
@@ -222,9 +231,7 @@ public class GameClient extends Application {
                 Platform.runLater(() -> processServerMessage(msg));
             }
         } catch (IOException e) {
-            Platform.runLater(() -> {
-                showAlert("Lỗi", "Mất kết nối với server!");
-            });
+            Platform.runLater(() -> showAlert("Lỗi", "Mất kết nối với server!"));
         }
     }
 
@@ -238,6 +245,8 @@ public class GameClient extends Application {
                 currentUsername = data;
                 createMainGameUI();
                 primaryStage.setScene(new Scene(mainGamePane, 500, 400));
+                // Request online users after UI has been created and scene is set
+                Platform.runLater(() -> sendMessage("GET_ONLINE_USERS"));
                 break;
 
             case "LOGIN_FAILED":
@@ -284,6 +293,12 @@ public class GameClient extends Application {
     }
 
     private void updateOnlineUsers(String data) {
+        // Add null check to prevent NullPointerException
+        if (userListView == null) {
+            // UI not ready yet, ignore this update
+            return;
+        }
+
         onlineUsers.clear();
         userListView.getItems().clear();
 
@@ -390,8 +405,6 @@ public class GameClient extends Application {
 
         String[] parts = data.split(",");
         String winner = parts[0];
-        int finalScore1 = Integer.parseInt(parts[1]);
-        int finalScore2 = Integer.parseInt(parts[2]);
 
         String resultMessage;
         if (winner.equals(currentUsername)) {
@@ -404,8 +417,7 @@ public class GameClient extends Application {
             resultMessage = "Bạn đã thua!\nĐiểm của bạn: " + currentScore;
         }
 
-        showAlert("Kết thúc game", resultMessage);
-        backToMainMenu();
+        showGameEndDialog("Kết thúc game", resultMessage, true);
     }
 
     private void showLeaderboard(String data) {
@@ -415,7 +427,7 @@ public class GameClient extends Application {
 
         StringBuilder content = new StringBuilder();
         content.append(String.format("%-15s %-8s %-8s %-8s %-8s\n", "Tên", "Điểm", "Trận", "Thắng", "Tỷ lệ %"));
-        content.append("=" .repeat(60)).append("\n");
+        content.append("=".repeat(60)).append("\n");
 
         if (!data.isEmpty()) {
             String[] players = data.split(";");
@@ -446,7 +458,51 @@ public class GameClient extends Application {
         currentGameId = null;
         opponent = null;
         currentScore = 0;
+        // Tạo lại mainGamePane mới để tránh lỗi VBox đã được sử dụng
+        createMainGameUI();
         primaryStage.setScene(new Scene(mainGamePane, 500, 400));
+        // Cập nhật danh sách online users
+        sendMessage("GET_ONLINE_USERS");
+    }
+
+    private void showGameEndDialog(String title, String message, boolean isGameCompleted) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(message);
+
+        if (isGameCompleted) {
+            // Thêm nút cho người chơi lựa chọn sau game kết thúc
+            ButtonType playAgainButton = new ButtonType("Chơi tiếp");
+            ButtonType mainMenuButton = new ButtonType("Menu chính");
+            ButtonType leaderboardButton = new ButtonType("Xem bảng xếp hạng");
+
+            alert.getButtonTypes().setAll(playAgainButton, leaderboardButton, mainMenuButton);
+            alert.setContentText("Bạn muốn làm gì tiếp theo?");
+
+            Optional<ButtonType> result = alert.showAndWait();
+
+            if (result.isPresent()) {
+                if (result.get() == playAgainButton) {
+                    // Quay về menu chính để tìm đối thủ mới
+                    backToMainMenu();
+                    showAlert("Thông báo", "Hãy chọn đối thủ để chơi tiếp!");
+                } else if (result.get() == leaderboardButton) {
+                    // Xem bảng xếp hạng trước rồi về menu chính
+                    sendMessage("GET_LEADERBOARD");
+                    backToMainMenu();
+                } else {
+                    // Về menu chính
+                    backToMainMenu();
+                }
+            } else {
+                backToMainMenu();
+            }
+        } else {
+            // Game bị thoát giữa chừng - chỉ hiện thông báo và về menu
+            alert.setContentText(message);
+            alert.showAndWait();
+            backToMainMenu();
+        }
     }
 
     private void sendMessage(String message) {
@@ -497,3 +553,4 @@ public class GameClient extends Application {
         }
     }
 }
+

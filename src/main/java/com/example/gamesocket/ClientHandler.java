@@ -51,6 +51,9 @@ public class ClientHandler implements Runnable {
             case "REGISTER":
                 handleRegister(data);
                 break;
+            case "GET_ONLINE_USERS":
+                server.sendOnlineUsersToClient(this);
+                break;
             case "INVITE":
                 server.handleGameInvitation(username, data);
                 break;

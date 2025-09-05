@@ -2,17 +2,10 @@ package com.example.gamesocket;
 // GameServer.java
 import java.io.*;
 import java.net.*;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.sql.*;
 import java.util.*;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GameServer {
     private static final int PORT = 8888;
@@ -105,6 +98,18 @@ public class GameServer {
     }
 
     public void broadcastOnlineUsers() {
+        String userListMessage = buildOnlineUsersMessage();
+        for (ClientHandler client : onlineClients.values()) {
+            client.sendMessage(userListMessage);
+        }
+    }
+
+    public void sendOnlineUsersToClient(ClientHandler client) {
+        String userListMessage = buildOnlineUsersMessage();
+        client.sendMessage(userListMessage);
+    }
+
+    private String buildOnlineUsersMessage() {
         StringBuilder userList = new StringBuilder("ONLINE_USERS:");
         for (Map.Entry<String, ClientHandler> entry : onlineClients.entrySet()) {
             String username = entry.getKey();
@@ -113,11 +118,7 @@ public class GameServer {
             int totalScore = getUserTotalScore(username);
             userList.append(username).append(",").append(totalScore).append(",").append(status).append(";");
         }
-
-        String message = userList.toString();
-        for (ClientHandler client : onlineClients.values()) {
-            client.sendMessage(message);
-        }
+        return userList.toString();
     }
 
     public void handleGameInvitation(String inviter, String invited) {
