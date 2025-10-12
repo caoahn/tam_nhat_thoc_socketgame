@@ -69,6 +69,14 @@ public class ClientHandler implements Runnable {
             case "GET_LEADERBOARD":
                 sendMessage(server.getLeaderboard());
                 break;
+            case "PRIVATE_MESSAGE":
+                String[] chatParts = data.split(":", 2);
+                if (chatParts.length == 2) {
+                    String recipient = chatParts[0];
+                    String messageContent = chatParts[1];
+                    server.sendPrivateMessage(this.username, recipient, messageContent);
+                }
+                break;
             case "QUIT_GAME":
                 handleQuitGame();
                 break;

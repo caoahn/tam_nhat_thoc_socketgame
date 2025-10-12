@@ -14,6 +14,7 @@ import javafx.stage.Stage;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.function.Consumer;
 
 public class GameClient extends Application {
     private static final String SERVER_HOST = "localhost";
@@ -44,6 +45,7 @@ public class GameClient extends Application {
     // Online users
     private ListView<String> userListView;
     private Map<String, UserInfo> onlineUsers;
+    private Map<String, ChatWindow> openChatWindows = new HashMap<>();
 
     @Override
     public void start(Stage primaryStage) {
@@ -54,7 +56,12 @@ public class GameClient extends Application {
         primaryStage.setResizable(false);
 
         createLoginUI();
-        primaryStage.setScene(new Scene(loginPane, 400, 300));
+        Scene loginScene = new Scene(loginPane, 400, 350);
+
+        // ÁP DỤNG CSS VÀO SCENE
+        loginScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+
+        primaryStage.setScene(loginScene);
         primaryStage.show();
 
         connectToServer();
@@ -81,9 +88,11 @@ public class GameClient extends Application {
         loginPane = new VBox(10);
         loginPane.setPadding(new Insets(20));
         loginPane.setAlignment(Pos.CENTER);
+        loginPane.getStyleClass().add("main-pane");
 
         Label titleLabel = new Label("GAME TẤM NHẶT THÓC");
         titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        titleLabel.getStyleClass().add("title-label");
 
         TextField usernameField = new TextField();
         usernameField.setPromptText("Tên đăng nhập");
@@ -118,43 +127,119 @@ public class GameClient extends Application {
     }
 
     private void createMainGameUI() {
-        mainGamePane = new VBox(10);
-        mainGamePane.setPadding(new Insets(10));
+        BorderPane borderPane = new BorderPane();
+        borderPane.setPadding(new Insets(10));
 
-        // Header
+        // TOP: Lời chào mừng
         Label welcomeLabel = new Label("Chào mừng: " + currentUsername);
-        welcomeLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        welcomeLabel.getStyleClass().add("welcome-label");
+        BorderPane.setAlignment(welcomeLabel, Pos.CENTER);
+        borderPane.setTop(welcomeLabel);
 
-        // User list
-        Label onlineLabel = new Label("Người chơi trực tuyến:");
+        // CENTER: Danh sách người chơi
+        VBox userListBox = new VBox(5);
+        Label onlineLabel = new Label("Người chơi trực tuyến (click chuột phải để mời):");
         userListView = new ListView<>();
-        userListView.setPrefHeight(200);
-        userListView.setOnMouseClicked(e -> {
-            if (e.getClickCount() == 2) {
-                String selectedUser = userListView.getSelectionModel().getSelectedItem();
-                if (selectedUser != null && !selectedUser.contains("(BUSY)")) {
-                    String username = selectedUser.split(" - ")[0];
-                    if (!username.equals(currentUsername)) {
-                        sendMessage("INVITE:" + username);
-                    }
-                }
-            }
-        });
 
-        // Buttons
+        // =================== BỔ SUNG PHẦN CODE BỊ THIẾU ===================
+        // BƯỚC 1: Tạo ContextMenu và MenuItem
+        ContextMenu userContextMenu = new ContextMenu();
+        MenuItem inviteMenuItem = new MenuItem("Mời chơi");
+        MenuItem chatMenuItem = new MenuItem("Nhắn tin");
+
+        userContextMenu.getItems().addAll(inviteMenuItem, chatMenuItem);
+
+        // BƯỚC 2: Sử dụng setCellFactory để tùy chỉnh từng hàng và gán ContextMenu
+        userListView.setCellFactory(lv -> {
+            ListCell<String> cell = new ListCell<>();
+            cell.emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    cell.setContextMenu(null);
+                } else {
+                    cell.setContextMenu(userContextMenu);
+
+                    // Hành động mời chơi
+                    inviteMenuItem.setOnAction(event -> {
+                        String selectedItem = cell.getItem();
+                        if (selectedItem != null) {
+                            String targetUsername = selectedItem.split(" - ")[0];
+                            if (selectedItem.contains("(BUSY)")) {
+                                showAlert("Không thể mời", targetUsername + " đang ở trong trận!");
+                            } else if (targetUsername.equals(currentUsername)) {
+                                showAlert("Không thể mời", "Bạn không thể tự mời chính mình!");
+                            } else {
+                                sendMessage("INVITE:" + targetUsername);
+                            }
+                        }
+                    });
+
+                    // Hành động nhắn tin
+                    chatMenuItem.setOnAction(event -> {
+                        String selectedItem = cell.getItem();
+                        if (selectedItem != null) {
+                            String targetUsername = selectedItem.split(" - ")[0];
+                            if (!targetUsername.equals(currentUsername)) {
+                                openPrivateChat(targetUsername);
+                            }
+                        }
+                    });
+                }
+            });
+
+            cell.itemProperty().addListener((obs, oldItem, newItem) -> {
+                if (newItem != null) {
+                    cell.setText(newItem);
+                } else {
+                    cell.setText(null);
+                }
+            });
+
+            return cell;
+        });
+        // =================== KẾT THÚC PHẦN BỔ SUNG ===================
+
+        userListBox.getChildren().addAll(onlineLabel, userListView);
+        borderPane.setCenter(userListBox);
+        BorderPane.setMargin(userListBox, new Insets(10, 5, 0, 0));
+
+
+        // RIGHT: Khu vực chat (tạm thời ẩn đi)
+        // VBox chatPane = createChatPane();
+        // borderPane.setRight(chatPane);
+        // BorderPane.setMargin(chatPane, new Insets(10, 0, 0, 5));
+
+        // BOTTOM: Các nút chức năng
         Button leaderboardButton = new Button("Bảng xếp hạng");
         leaderboardButton.setOnAction(e -> sendMessage("GET_LEADERBOARD"));
-
         Button logoutButton = new Button("Đăng xuất");
         logoutButton.setOnAction(e -> {
             disconnect();
             Platform.exit();
         });
-
         HBox buttonBox = new HBox(10, leaderboardButton, logoutButton);
         buttonBox.setAlignment(Pos.CENTER);
+        borderPane.setBottom(buttonBox);
+        BorderPane.setMargin(buttonBox, new Insets(10, 0, 0, 0));
 
-        mainGamePane.getChildren().addAll(welcomeLabel, onlineLabel, userListView, buttonBox);
+        // Gán mainGamePane là borderPane
+        mainGamePane = new VBox(borderPane);
+        mainGamePane.getStyleClass().add("root");
+    }
+
+    private void openPrivateChat(String recipient) {
+        if (openChatWindows.containsKey(recipient)) {
+            openChatWindows.get(recipient).toFront();
+            return;
+        }
+
+        Consumer<String> messageSender = message -> {
+            sendMessage("PRIVATE_MESSAGE:" + recipient + ":" + message);
+        };
+
+        ChatWindow chatWindow = new ChatWindow(currentUsername, recipient, messageSender);
+        openChatWindows.put(recipient, chatWindow);
+        chatWindow.setOnHidden(e -> openChatWindows.remove(recipient));
+        chatWindow.show();
     }
 
     private void createGamePlayUI() {
@@ -285,6 +370,21 @@ public class GameClient extends Application {
             case "GAME_ENDED":
                 handleGameEnded(data);
                 break;
+            case "INCOMING_MESSAGE":
+                String[] chatParts = data.split(":", 2);
+                String sender = chatParts[0];
+                String content = chatParts[1];
+                Platform.runLater(() -> {
+                    if (!openChatWindows.containsKey(sender)) {
+                        openPrivateChat(sender);
+                    }
+                    openChatWindows.get(sender).appendMessage(sender + ": " + content);
+                });
+                break;
+            case "SYSTEM_MESSAGE":
+                showAlert("Thông báo từ Server", data);
+                break;
+
 
             case "LEADERBOARD":
                 showLeaderboard(data);

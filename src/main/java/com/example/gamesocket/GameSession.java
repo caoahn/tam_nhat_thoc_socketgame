@@ -5,9 +5,9 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class GameSession {
-    private static final int TOTAL_GRAINS = 50;
+    private static final int TOTAL_GRAINS = 70;
     private static final int TARGET_RICE = 20;
-    private static final int GAME_DURATION = 15; // seconds
+    private static final int GAME_DURATION = 200; // seconds
 
     private String gameId;
     private String player1;

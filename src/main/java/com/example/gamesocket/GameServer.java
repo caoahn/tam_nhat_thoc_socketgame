@@ -85,6 +85,24 @@ public class GameServer {
         }
     }
 
+    public synchronized void sendPrivateMessage(String sender, String recipient, String message) {
+        // Tìm ClientHandler của người nhận trong danh sách online
+        ClientHandler recipientHandler = onlineClients.get(recipient);
+
+        if (recipientHandler != null) {
+            // Nếu người nhận đang online, tạo message và gửi cho họ
+            String forwardMessage = "INCOMING_MESSAGE:" + sender + ":" + message;
+            recipientHandler.sendMessage(forwardMessage);
+        } else {
+            // Nếu người nhận không online, gửi lại thông báo lỗi cho người gửi
+            ClientHandler senderHandler = onlineClients.get(sender);
+            if (senderHandler != null) {
+                // Chúng ta sẽ dùng một message hệ thống mới để client xử lý
+                senderHandler.sendMessage("SYSTEM_MESSAGE:Người dùng '" + recipient + "' không trực tuyến hoặc đã thoát.");
+            }
+        }
+    }
+
     public synchronized void addClient(String username, ClientHandler handler) {
         onlineClients.put(username, handler);
         broadcastOnlineUsers();
