@@ -7,15 +7,16 @@ Dự án "Game Tấm Nhặt Thóc" là một ứng dụng game trực tuyến đ
 ### Kiến trúc hệ thống:
 - **Client-Server Architecture**: Sử dụng Socket TCP
 - **Database**: MySQL để lưu trữ thông tin người dùng và kết quả game
-- **UI Framework**: JavaFX
+- **UI Framework**: JavaFX với CSS styling
 - **Threading**: Multithreading với ExecutorService
+- **Chat System**: Hệ thống chat riêng tư giữa người chơi
 
 ---
 
 ## 1. FILE GAMESERVER.JAVA
 
 ### Mục đích:
-Server chính của game, quản lý tất cả kết nối client, phiên game và database.
+Server chính của game, quản lý tất cả kết nối client, phiên game, database và hệ thống chat.
 
 ### Thuộc tính chính:
 ```java
@@ -208,6 +209,7 @@ run() → Đọc message từ client → handleMessage() → Xử lý theo comma
   - `GAME_ACTION:grainIndex` → `handleGameAction()`
   - `GET_LEADERBOARD` → `sendMessage(server.getLeaderboard())`
   - `QUIT_GAME` → `handleQuitGame()`
+  - `SEND_MESSAGE:recipient,message` → `handleSendMessage()`
 
 #### **handleLogin(String data)**
 - **Mục đích**: Xử lý đăng nhập
@@ -231,6 +233,13 @@ run() → Đọc message từ client → handleMessage() → Xử lý theo comma
   1. Parse data thành grainIndex (int)
   2. Kiểm tra đang trong game (`currentGameId != null`)
   3. Gọi `server.handleGameAction(currentGameId, username, grainIndex)`
+
+#### **handleSendMessage(String data)**
+- **Mục đích**: Xử lý gửi tin nhắn riêng tư
+- **Workflow**:
+  1. Parse data thành recipient và message
+  2. Gọi `server.sendPrivateMessage(username, recipient, message)`
+  3. Gửi phản hồi thành công hoặc lỗi cho client
 
 #### **handleQuitGame()**
 - **Mục đích**: Xử lý người chơi thoát game giữa chừng
@@ -357,6 +366,7 @@ Game invitation → Accept → createGamePlayUI() → startGameTimer() → Chơi
   - `OPPONENT_SCORE:player,score` → Cập nhật điểm đối thủ
   - `GAME_ENDED:winner,score1,score2` → Kết thúc game
   - `LEADERBOARD:data` → Hiển thị bảng xếp hạng
+  - `INCOMING_MESSAGE:sender:message` → Hiển thị tin nhắn riêng tư
 
 #### **updateOnlineUsers(String data)**
 - **Mục đích**: Cập nhật danh sách user online
@@ -587,6 +597,7 @@ Client A double-click Client B → Gửi INVITE:B → Server gửi GAME_INVITATI
 - `GAME_ACTION:grainIndex`
 - `GET_LEADERBOARD`
 - `QUIT_GAME`
+- `SEND_MESSAGE:recipient,message`
 
 ### Messages từ Server → Client:
 - `LOGIN_SUCCESS:username` / `LOGIN_FAILED:reason`
@@ -599,6 +610,7 @@ Client A double-click Client B → Gửi INVITE:B → Server gửi GAME_INVITATI
 - `OPPONENT_SCORE:player,score`
 - `GAME_ENDED:winner,score1,score2`
 - `LEADERBOARD:user1,score1,played1,won1,rate1;...`
+- `INCOMING_MESSAGE:sender:message`
 
 ## YÊU CẦU HỆ THỐNG
 
