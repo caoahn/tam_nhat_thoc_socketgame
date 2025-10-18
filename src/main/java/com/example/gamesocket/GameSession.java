@@ -1,4 +1,3 @@
-
 package com.example.gamesocket;
 // GameSession.java
 import java.util.*;
@@ -7,7 +6,7 @@ import java.util.concurrent.*;
 public class GameSession {
     private static final int TOTAL_GRAINS = 70;
     private static final int TARGET_RICE = 20;
-    private static final int GAME_DURATION = 200; // seconds
+    private static final int GAME_DURATION = 15; // seconds
 
     private String gameId;
     private String player1;
@@ -149,6 +148,7 @@ public class GameSession {
 
     private void endGame(String winner) {
         if (gameEnded) return;
+
         gameEnded = true;
 
         if (gameTimer != null) {
@@ -157,30 +157,63 @@ public class GameSession {
 
         int score1 = playerScores.get(player1);
         int score2 = playerScores.get(player2);
+
         long duration = (System.currentTimeMillis() - gameStartTime) / 1000;
 
         // Gửi kết quả cho cả hai người chơi
         ClientHandler client1 = server.getOnlineClients().get(player1);
         ClientHandler client2 = server.getOnlineClients().get(player2);
 
-        String resultMessage = "GAME_ENDED:" + winner + "," + score1 + "," + score2;
+        String gameEndMessage = "GAME_ENDED:" + winner + "," + score1 + "," + score2;
 
         if (client1 != null) {
-            client1.sendMessage(resultMessage);
+            client1.sendMessage(gameEndMessage);
         }
         if (client2 != null) {
-            client2.sendMessage(resultMessage);
+            client2.sendMessage(gameEndMessage);
         }
 
-        // Lưu kết quả vào database
+        // Thông báo server kết thúc game
         server.endGame(gameId, winner, player1, player2, score1, score2, (int)duration);
     }
 
-    public String getGameId() {
-        return gameId;
-    }
+    /**
+     * Xử lý khi một người chơi thoát game giữa chừng
+     * Người thoát sẽ thua, người còn lại sẽ thắng
+     */
+    public synchronized void handlePlayerQuit(String quittingPlayer) {
+        if (gameEnded) return;
 
-    public boolean isGameEnded() {
-        return gameEnded;
+        gameEnded = true;
+
+        if (gameTimer != null) {
+            gameTimer.cancel();
+        }
+
+        // Xác định người thắng (người không thoát)
+        String winner = quittingPlayer.equals(player1) ? player2 : player1;
+
+        int score1 = playerScores.get(player1);
+        int score2 = playerScores.get(player2);
+
+        long duration = (System.currentTimeMillis() - gameStartTime) / 1000;
+
+        // Gửi thông báo kết thúc game cho cả hai người chơi
+        ClientHandler quittingClient = server.getOnlineClients().get(quittingPlayer);
+        ClientHandler winnerClient = server.getOnlineClients().get(winner);
+
+        // Thông báo cho người thoát game (thua)
+        if (quittingClient != null) {
+            quittingClient.sendMessage("GAME_ENDED:QUIT_LOSS," + score1 + "," + score2);
+        }
+
+        // Thông báo cho người thắng
+        if (winnerClient != null) {
+            winnerClient.sendMessage("GAME_ENDED:QUIT_WIN," + score1 + "," + score2);
+        }
+
+        // Thông báo server kết thúc game với người thắng
+        server.endGame(gameId, winner, player1, player2, score1, score2, (int)duration);
     }
 }
+

@@ -39,3 +39,4 @@ build/
 
 # Copilot plugin state
 .idea/copilotDiffState.xml
+.idea/copilot.data.migration.*

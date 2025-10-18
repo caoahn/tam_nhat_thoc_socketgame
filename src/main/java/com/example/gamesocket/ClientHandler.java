@@ -130,8 +130,11 @@ public class ClientHandler implements Runnable {
 
     private void handleQuitGame() {
         if (inGame && currentGameId != null) {
-            // Xử lý người chơi thoát giữa chừng - tự động thua
-            sendMessage("GAME_ENDED:QUIT,0,0");
+            // Thông báo server xử lý người chơi thoát game
+            // Server sẽ tự động cho người còn lại thắng
+            server.handlePlayerQuit(currentGameId, username);
+
+            // Reset trạng thái của client này
             setInGame(false);
             setCurrentGameId(null);
             server.broadcastOnlineUsers();

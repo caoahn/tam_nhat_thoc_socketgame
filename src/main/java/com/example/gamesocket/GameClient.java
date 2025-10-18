@@ -27,6 +27,7 @@ public class GameClient extends Application {
 
     // UI Components
     private VBox loginPane;
+    private VBox registerPane;  // Thêm pane đăng ký riêng
     private VBox mainGamePane;
     private VBox gamePlayPane;
 
@@ -94,6 +95,9 @@ public class GameClient extends Application {
         titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
         titleLabel.getStyleClass().add("title-label");
 
+        Label subtitleLabel = new Label("Đăng nhập để bắt đầu chơi");
+        subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
+
         TextField usernameField = new TextField();
         usernameField.setPromptText("Tên đăng nhập");
         usernameField.setMaxWidth(200);
@@ -102,28 +106,130 @@ public class GameClient extends Application {
         passwordField.setPromptText("Mật khẩu");
         passwordField.setMaxWidth(200);
 
-        Button loginButton = new Button("Đăng nhập");
+        Button loginButton = new Button("🔑 Đăng nhập");
         loginButton.setOnAction(e -> {
             String username = usernameField.getText().trim();
             String password = passwordField.getText().trim();
             if (!username.isEmpty() && !password.isEmpty()) {
                 sendMessage("LOGIN:" + username + "," + password);
+            } else {
+                showAlert("Lỗi", "Vui lòng nhập đầy đủ thông tin!");
             }
         });
 
-        Button registerButton = new Button("Đăng ký");
-        registerButton.setOnAction(e -> {
-            String username = usernameField.getText().trim();
-            String password = passwordField.getText().trim();
-            if (!username.isEmpty() && !password.isEmpty()) {
-                sendMessage("REGISTER:" + username + "," + password);
-            }
-        });
+        Button registerButton = new Button("📝 Tạo tài khoản mới");
+        registerButton.setOnAction(e -> showRegisterForm());
 
         HBox buttonBox = new HBox(10, loginButton, registerButton);
         buttonBox.setAlignment(Pos.CENTER);
 
-        loginPane.getChildren().addAll(titleLabel, usernameField, passwordField, buttonBox);
+        loginPane.getChildren().addAll(titleLabel, subtitleLabel, usernameField, passwordField, buttonBox);
+    }
+
+    private void createRegisterUI() {
+        registerPane = new VBox(15);
+        registerPane.setPadding(new Insets(20));
+        registerPane.setAlignment(Pos.CENTER);
+        registerPane.getStyleClass().add("main-pane");
+
+        Label titleLabel = new Label("ĐĂNG KÝ TÀI KHOẢN");
+        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        titleLabel.getStyleClass().add("title-label");
+
+        Label subtitleLabel = new Label("Tạo tài khoản mới để tham gia trò chơi");
+        subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
+
+        // Username field với validation
+        VBox usernameBox = new VBox(5);
+        Label usernameLabel = new Label("Tên đăng nhập:");
+        usernameLabel.setStyle("-fx-font-weight: bold;");
+        TextField usernameField = new TextField();
+        usernameField.setPromptText("Nhập tên đăng nhập (3-20 ký tự)");
+        usernameField.setMaxWidth(250);
+        usernameBox.getChildren().addAll(usernameLabel, usernameField);
+
+        // Password field với validation
+        VBox passwordBox = new VBox(5);
+        Label passwordLabel = new Label("Mật khẩu:");
+        passwordLabel.setStyle("-fx-font-weight: bold;");
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Nhập mật khẩu (tối thiểu 6 ký tự)");
+        passwordField.setMaxWidth(250);
+        passwordBox.getChildren().addAll(passwordLabel, passwordField);
+
+        // Confirm password field
+        VBox confirmPasswordBox = new VBox(5);
+        Label confirmPasswordLabel = new Label("Xác nhận mật khẩu:");
+        confirmPasswordLabel.setStyle("-fx-font-weight: bold;");
+        PasswordField confirmPasswordField = new PasswordField();
+        confirmPasswordField.setPromptText("Nhập lại mật khẩu");
+        confirmPasswordField.setMaxWidth(250);
+        confirmPasswordBox.getChildren().addAll(confirmPasswordLabel, confirmPasswordField);
+
+        // Buttons
+        Button registerButton = new Button("✨ Đăng ký");
+        registerButton.setStyle("-fx-background-color: linear-gradient(to bottom, #28a745, #218838); -fx-text-fill: white; -fx-font-weight: bold;");
+        registerButton.setOnAction(e -> {
+            String username = usernameField.getText().trim();
+            String password = passwordField.getText().trim();
+            String confirmPassword = confirmPasswordField.getText().trim();
+
+            // Validation
+            if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                showAlert("Lỗi", "Vui lòng điền đầy đủ thông tin!");
+                return;
+            }
+
+            if (username.length() < 3 || username.length() > 20) {
+                showAlert("Lỗi", "Tên đăng nhập phải từ 3-20 ký tự!");
+                return;
+            }
+
+            if (password.length() < 6) {
+                showAlert("Lỗi", "Mật khẩu phải có ít nhất 6 ký tự!");
+                return;
+            }
+
+            if (!password.equals(confirmPassword)) {
+                showAlert("Lỗi", "Mật khẩu xác nhận không khớp!");
+                return;
+            }
+
+            // Gửi request đăng ký
+            sendMessage("REGISTER:" + username + "," + password);
+        });
+
+        Button backButton = new Button("🔙 Quay lại đăng nhập");
+        backButton.setOnAction(e -> showLoginForm());
+
+        HBox buttonBox = new HBox(15, registerButton, backButton);
+        buttonBox.setAlignment(Pos.CENTER);
+
+        // Thêm hướng dẫn
+        Label instructionLabel = new Label("💡 Lưu ý: Tên đăng nhập và mật khẩu sẽ được sử dụng để đăng nhập vào game");
+        instructionLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #888; -fx-text-alignment: center;");
+        instructionLabel.setWrapText(true);
+        instructionLabel.setMaxWidth(300);
+
+        registerPane.getChildren().addAll(titleLabel, subtitleLabel, usernameBox, passwordBox, confirmPasswordBox, buttonBox, instructionLabel);
+    }
+
+    private void showRegisterForm() {
+        if (registerPane == null) {
+            createRegisterUI();
+        }
+
+        Scene registerScene = new Scene(registerPane, 450, 500);
+        registerScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+        primaryStage.setScene(registerScene);
+    }
+
+    private void showLoginForm() {
+        // Tạo lại loginPane để tránh lỗi JavaFX Node đã được sử dụng
+        createLoginUI();
+        Scene loginScene = new Scene(loginPane, 400, 350);
+        loginScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+        primaryStage.setScene(loginScene);
     }
 
     private void createMainGameUI() {
@@ -213,8 +319,20 @@ public class GameClient extends Application {
         leaderboardButton.setOnAction(e -> sendMessage("GET_LEADERBOARD"));
         Button logoutButton = new Button("Đăng xuất");
         logoutButton.setOnAction(e -> {
-            disconnect();
-            Platform.exit();
+            // Reset thông tin người dùng
+            currentUsername = null;
+            currentGameId = null;
+            opponent = null;
+            currentScore = 0;
+
+            // Đóng tất cả chat windows
+            for (ChatWindow chatWindow : openChatWindows.values()) {
+                chatWindow.close();
+            }
+            openChatWindows.clear();
+
+            // Quay về giao diện đăng nhập thay vì thoát ứng dụng
+            showLoginForm();
         });
         HBox buttonBox = new HBox(10, leaderboardButton, logoutButton);
         buttonBox.setAlignment(Pos.CENTER);
@@ -243,52 +361,65 @@ public class GameClient extends Application {
     }
 
     private void createGamePlayUI() {
-        gamePlayPane = new VBox(10);
-        gamePlayPane.setPadding(new Insets(10));
+        gamePlayPane = new VBox(15);
+        gamePlayPane.setPadding(new Insets(15));
+        gamePlayPane.setAlignment(Pos.CENTER);
+        gamePlayPane.getStyleClass().add("root");
 
-        // Game info
-        Label gameInfoLabel = new Label("Đang chơi với: " + opponent);
-        gameInfoLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        // Game info với styling đẹp hơn
+        Label gameInfoLabel = new Label("🌾 Đang chơi với: " + opponent + " 🌾");
+        gameInfoLabel.getStyleClass().add("game-info-label");
 
-        // Score and timer
-        HBox infoBox = new HBox(20);
+        // Score and timer với styling riêng biệt
+        HBox infoBox = new HBox(30);
         infoBox.setAlignment(Pos.CENTER);
 
-        scoreLabel = new Label("Điểm của bạn: 0");
-        scoreLabel.setStyle("-fx-font-size: 12px;");
+        scoreLabel = new Label("🌾 Điểm của bạn: 0");
+        scoreLabel.getStyleClass().add("score-label");
 
-        opponentScoreLabel = new Label("Điểm đối thủ: 0");
-        opponentScoreLabel.setStyle("-fx-font-size: 12px;");
+        opponentScoreLabel = new Label("⚔️ Điểm đối thủ: 0");
+        opponentScoreLabel.getStyleClass().add("opponent-score-label");
 
-        timerLabel = new Label("Thời gian: 15s");
-        timerLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: red;");
+        timerLabel = new Label("⏰ Thời gian: 15s");
+        timerLabel.getStyleClass().add("timer-label");
 
         infoBox.getChildren().addAll(scoreLabel, opponentScoreLabel, timerLabel);
 
-        // Game grid (5x10 = 50 grains)
+        // Hướng dẫn cho người chơi
+        Label instructionLabel = new Label("💡 Hướng dẫn: Click vào hạt thóc (màu trắng ngà) để ghi điểm. Tránh hạt trấu (màu nâu đậm)!");
+        instructionLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #8B4513; -fx-font-style: italic; -fx-text-alignment: center;");
+        instructionLabel.setWrapText(true);
+
+        // Game grid với styling đẹp hơn
         grainGrid = new GridPane();
         grainGrid.setAlignment(Pos.CENTER);
-        grainGrid.setHgap(5);
-        grainGrid.setVgap(5);
+        grainGrid.setHgap(8);
+        grainGrid.setVgap(8);
+        grainGrid.getStyleClass().add("game-grid");
 
-        // Create 50 grain buttons
+        // Create 50 grain circles với styling CSS
         for (int i = 0; i < 50; i++) {
-            Circle grain = new Circle(15);
-            grain.setFill(Color.YELLOW);
-            grain.setStroke(Color.BLACK);
+            Circle grain = new Circle(18); // Tăng kích thước lên một chút
+
+            // Áp dụng CSS class mặc định
+            grain.getStyleClass().addAll("grain-circle", "grain-unclicked");
 
             final int grainIndex = i;
             grain.setOnMouseClicked(e -> {
-                if (currentGameId != null) {
+                if (currentGameId != null && !grain.isDisabled()) {
                     sendMessage("GAME_ACTION:" + grainIndex);
                     grain.setDisable(true);
+                    // Thêm hiệu ứng click
+                    grain.setOpacity(0.7);
                 }
             });
 
             grainGrid.add(grain, i % 10, i / 10);
         }
 
-        Button quitButton = new Button("Thoát game");
+        // Quit button với styling
+        Button quitButton = new Button("🚪 Thoát game");
+        quitButton.setStyle("-fx-background-color: linear-gradient(to bottom, #DC143C, #B22222); -fx-text-fill: white; -fx-font-weight: bold;");
         quitButton.setOnAction(e -> {
             // Hiển thị xác nhận trước khi thoát
             Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -298,14 +429,13 @@ public class GameClient extends Application {
 
             Optional<ButtonType> result = confirmAlert.showAndWait();
             if (result.isPresent() && result.get() == ButtonType.OK) {
+                // Chỉ gửi message QUIT_GAME, không hiển thị dialog ở đây
+                // Dialog sẽ được hiển thị trong handleGameEnded() khi nhận response từ server
                 sendMessage("QUIT_GAME");
-                // Hiển thị thông báo thua cuộc khi thoát chủ động
-                showGameEndDialog("Thua cuộc",
-                        "Bạn đã thoát game giữa chừng!\nKết quả: Thua cuộc", false);
             }
         });
 
-        gamePlayPane.getChildren().addAll(gameInfoLabel, infoBox, grainGrid, quitButton);
+        gamePlayPane.getChildren().addAll(gameInfoLabel, infoBox, instructionLabel, grainGrid, quitButton);
     }
 
     private void handleServerMessages() {
@@ -329,7 +459,12 @@ public class GameClient extends Application {
             case "LOGIN_SUCCESS":
                 currentUsername = data;
                 createMainGameUI();
-                primaryStage.setScene(new Scene(mainGamePane, 500, 400));
+                Scene mainScene = new Scene(mainGamePane, 500, 400);
+
+                // Áp dụng CSS cho main scene
+                mainScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+
+                primaryStage.setScene(mainScene);
                 // Request online users after UI has been created and scene is set
                 Platform.runLater(() -> sendMessage("GET_ONLINE_USERS"));
                 break;
@@ -341,6 +476,8 @@ public class GameClient extends Application {
 
             case "REGISTER_SUCCESS":
                 showAlert("Thành công", "Đăng ký thành công! Vui lòng đăng nhập.");
+                // Tự động chuyển về form đăng nhập sau khi đăng ký thành công
+                showLoginForm();
                 break;
 
             case "ONLINE_USERS":
@@ -449,7 +586,12 @@ public class GameClient extends Application {
         currentScore = 0;
 
         createGamePlayUI();
-        primaryStage.setScene(new Scene(gamePlayPane, 600, 500));
+        Scene gameScene = new Scene(gamePlayPane, 700, 600);
+
+        // Áp dụng CSS cho game scene
+        gameScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+
+        primaryStage.setScene(gameScene);
 
         startGameTimer();
     }
@@ -465,7 +607,7 @@ public class GameClient extends Application {
             public void run() {
                 Platform.runLater(() -> {
                     timeRemaining--;
-                    timerLabel.setText("Thời gian: " + timeRemaining + "s");
+                    timerLabel.setText("⏰ Thời gian: " + timeRemaining + "s");
 
                     if (timeRemaining <= 0) {
                         gameTimer.cancel();
@@ -481,21 +623,27 @@ public class GameClient extends Application {
         String grainType = parts[1];
         currentScore = Integer.parseInt(parts[2]);
 
-        // Update grain appearance
+        // Update grain appearance với CSS classes
         Circle grain = (Circle) grainGrid.getChildren().get(grainIndex);
+
+        // Remove old style classes
+        grain.getStyleClass().removeAll("grain-unclicked", "grain-rice", "grain-chaff");
+
         if (grainType.equals("RICE")) {
-            grain.setFill(Color.GREEN);
+            // Hạt gạo (thóc đã bóc vỏ) - màu trắng ngà với hiệu ứng xanh
+            grain.getStyleClass().add("grain-rice");
         } else {
-            grain.setFill(Color.BROWN);
+            // Hạt trấu/thóc lép - màu nâu đậm với hiệu ứng đỏ
+            grain.getStyleClass().add("grain-chaff");
         }
 
-        scoreLabel.setText("Điểm của bạn: " + currentScore);
+        scoreLabel.setText("🌾 Điểm của bạn: " + currentScore);
     }
 
     private void handleOpponentScore(String data) {
         String[] parts = data.split(",");
         int opponentScore = Integer.parseInt(parts[1]);
-        opponentScoreLabel.setText("Điểm đối thủ: " + opponentScore);
+        opponentScoreLabel.setText("⚔️ Điểm đối thủ: " + opponentScore);
     }
 
     private void handleGameEnded(String data) {
@@ -507,17 +655,30 @@ public class GameClient extends Application {
         String winner = parts[0];
 
         String resultMessage;
-        if (winner.equals(currentUsername)) {
+        boolean isGameCompleted = true;
+
+        if (winner.equals("QUIT_LOSS")) {
+            // Người chơi này đã thoát game và bị thua
+            resultMessage = "Bạn đã thoát game giữa chừng!\nKết quả: Thua cuộc\nĐiểm của bạn: " + currentScore;
+            isGameCompleted = false;
+        } else if (winner.equals("QUIT_WIN")) {
+            // Đối thủ đã thoát game, người chơi này thắng
+            resultMessage = "Đối thủ đã thoát game!\nChúc mừng! Bạn thắng cuộc!\nĐiểm của bạn: " + currentScore;
+            isGameCompleted = true;
+        } else if (winner.equals(currentUsername)) {
             resultMessage = "Chúc mừng! Bạn đã thắng!\nĐiểm của bạn: " + currentScore;
+            isGameCompleted = true;
         } else if (winner.equals("DRAW")) {
             resultMessage = "Hòa!\nĐiểm của bạn: " + currentScore;
+            isGameCompleted = true;
         } else if (winner.equals("QUIT")) {
             resultMessage = "Game kết thúc do bạn thoát!";
+            isGameCompleted = false;
         } else {
             resultMessage = "Bạn đã thua!\nĐiểm của bạn: " + currentScore;
+            isGameCompleted = true;
         }
-
-        showGameEndDialog("Kết thúc game", resultMessage, true);
+        showGameEndDialog("Kết thúc game", resultMessage, isGameCompleted);
     }
 
     private void showLeaderboard(String data) {
@@ -560,7 +721,12 @@ public class GameClient extends Application {
         currentScore = 0;
         // Tạo lại mainGamePane mới để tránh lỗi VBox đã được sử dụng
         createMainGameUI();
-        primaryStage.setScene(new Scene(mainGamePane, 500, 400));
+        Scene mainScene = new Scene(mainGamePane, 500, 400);
+
+        // Áp dụng CSS cho main scene
+        mainScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+
+        primaryStage.setScene(mainScene);
         // Cập nhật danh sách online users
         sendMessage("GET_ONLINE_USERS");
     }

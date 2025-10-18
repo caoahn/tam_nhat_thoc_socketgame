@@ -183,6 +183,18 @@ public class GameServer {
         }
     }
 
+    /**
+     * Xử lý khi một người chơi thoát game giữa chừng
+     * @param gameId ID của game session
+     * @param quittingPlayer Tên người chơi thoát game
+     */
+    public void handlePlayerQuit(String gameId, String quittingPlayer) {
+        GameSession session = activeSessions.get(gameId);
+        if (session != null) {
+            session.handlePlayerQuit(quittingPlayer);
+        }
+    }
+
     public void endGame(String gameId, String winner, String player1, String player2,
                         int score1, int score2, int duration) {
         activeSessions.remove(gameId);
@@ -373,3 +385,4 @@ public class GameServer {
         server.start();
     }
 }
+
