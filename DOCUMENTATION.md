@@ -209,7 +209,7 @@ run() → Đọc message từ client → handleMessage() → Xử lý theo comma
   - `GAME_ACTION:grainIndex` → `handleGameAction()`
   - `GET_LEADERBOARD` → `sendMessage(server.getLeaderboard())`
   - `QUIT_GAME` → `handleQuitGame()`
-  - `SEND_MESSAGE:recipient,message` → `handleSendMessage()`
+  - `PRIVATE_MESSAGE:recipient:message` → `server.sendPrivateMessage(username, recipient, message)`
 
 #### **handleLogin(String data)**
 - **Mục đích**: Xử lý đăng nhập
@@ -427,9 +427,9 @@ Quản lý logic game cho một phiên chơi giữa 2 người chơi.
 
 ### Thuộc tính chính:
 ```java
-private static final int TOTAL_GRAINS = 50;    // Tổng số hạt
+private static final int TOTAL_GRAINS = 70;    // Tổng số hạt (thực tế trong code)
 private static final int TARGET_RICE = 20;     // Số hạt thóc cần để thắng
-private static final int GAME_DURATION = 15;   // Thời gian game (giây)
+private static final int GAME_DURATION = 200;  // Thời gian game (200 giây)
 
 private String gameId;                          // ID phiên game
 private String player1, player2;               // Hai người chơi
@@ -463,9 +463,9 @@ handlePlayerAction() → Kiểm tra valid → Cập nhật điểm → Kiểm tr
 ### Chi tiết các function:
 
 #### **initializeGrains()**
-- **Mục đích**: Khởi tạo 50 hạt với vị trí ngẫu nhiên
+- **Mục đích**: Khởi tạo 70 hạt với vị trí ngẫu nhiên
 - **Workflow**:
-  1. Tạo mảng `grainTypes[50]` với giá trị false
+  1. Tạo mảng `grainTypes[70]` với giá trị false
   2. Random chọn `TARGET_RICE + 5` vị trí làm hạt thóc (true)
   3. Đảm bảo có đủ hạt thóc để thắng game
 
@@ -473,7 +473,7 @@ handlePlayerAction() → Kiểm tra valid → Cập nhật điểm → Kiểm tr
 - **Mục đích**: Bắt đầu phiên game
 - **Workflow**:
   1. Lưu thời gian bắt đầu
-  2. Lấy ClientHandler của cả 2 người chơi
+  2. Lấy ClientHandler của cả 2 người chợi
   3. Gửi `"GAME_STARTED:gameId,opponent,duration"` cho mỗi người
   4. Gọi `startGameTimer()`
 
@@ -481,21 +481,21 @@ handlePlayerAction() → Kiểm tra valid → Cập nhật điểm → Kiểm tr
 - **Mục đích**: Tạo timer tự động kết thúc game
 - **Workflow**:
   1. Tạo Timer
-  2. Schedule task sau `GAME_DURATION` giây
+  2. Schedule task sau `GAME_DURATION = 200` giây
   3. Khi hết thời gian: gọi `endGameByTimeout()`
 
 #### **handlePlayerAction(String player, int grainIndex)**
-- **Mục đích**: Xử lý hành động click hạt của người chơi
+- **Mục đích**: Xử lý hành động click hạt của người chợi
 - **Workflow**:
-  1. Kiểm tra game chưa kết thúc và grainIndex hợp lệ
-  2. Kiểm tra người chơi chưa click hạt này
+  1. Kiểm tra game chưa kết thúc và grainIndex hợp lệ (0-69)
+  2. Kiểm tra người chợi chưa click hạt này
   3. Thêm grainIndex vào `playerClicks[player]`
   4. Kiểm tra `grainTypes[grainIndex]`:
      - Nếu là thóc (true):
-       - Tăng điểm người chơi
-       - Gửi `"GRAIN_RESULT:index,RICE,newScore"` cho người chơi
+       - Tăng điểm người chợi
+       - Gửi `"GRAIN_RESULT:index,RICE,newScore"` cho người chợi
        - Gửi `"OPPONENT_SCORE:player,score"` cho đối thủ
-       - Kiểm tra đạt `TARGET_RICE` → thắng game
+       - Kiểm tra đạt `TARGET_RICE = 20` → thắng game
      - Nếu là trấu (false):
        - Gửi `"GRAIN_RESULT:index,CHAFF,currentScore"`
 
@@ -517,7 +517,53 @@ handlePlayerAction() → Kiểm tra valid → Cập nhật điểm → Kiểm tr
 
 ---
 
-## FLOW WORK TỔNG THỂ
+## 5. FILE CHATWINDOW.JAVA
+
+### Mục đích:
+Tạo cửa sổ chat riêng tư giữa hai người chợi.
+
+### Thuộc tính chính:
+```java
+private TextArea chatArea;      // Hiển thị tin nhắn
+private TextField messageField; // Nhập tin nhắn
+```
+
+### Workflow chính:
+```
+ChatWindow(currentUser, recipient, messageSender) → Tạo UI → Xử lý send message
+```
+
+### Chi tiết các function:
+
+#### **Constructor(String currentUser, String recipient, Consumer<String> messageSender)**
+- **Mục đích**: Khởi tạo cửa sổ chat
+- **Workflow**:
+  1. Tạo TextArea không thể edit để hiển thị tin nhắn
+  2. Tạo TextField để nhập tin nhắn
+  3. Tạo Button "Gửi"
+  4. Khi gửi tin nhắn: gọi messageSender.accept() và hiển thị trong chatArea
+
+#### **appendMessage(String message)**
+- **Mục đích**: Thêm tin nhắn vào khu vực hiển thị
+- **Implementation**: `chatArea.appendText(message + "\n")`
+
+---
+
+## 6. MÂU THUẪN TRONG CODE CẦN SỬA
+
+### Vấn đề hiện tại:
+1. **GameSession**: `TOTAL_GRAINS = 70`, `GAME_DURATION = 200` giây
+2. **GameClient**: Tạo grid 5x10 = 50 Circle, timer countdown từ 15 giây
+3. **Documentation cũ**: Ghi 50 grains, 15 giây
+
+### Khuyến nghị sửa:
+1. **Thống nhất số lượng hạt**: Chọn 50 hoặc 70 và cập nhật cả server/client
+2. **Thống nhất thời gian**: Chọn 15 giây (phù hợp với game nhanh) hoặc 200 giây
+3. **Cập nhật UI**: Nếu dùng 70 grains thì cần tạo grid 7x10 hoặc 5x14
+
+---
+
+## FLOW WORK TỔNG THỂ (CẬP NHẬT)
 
 ### 1. Khởi động hệ thống:
 ```
@@ -527,8 +573,8 @@ handlePlayerAction() → Kiểm tra valid → Cập nhật điểm → Kiểm tr
    └── Lắng nghe kết nối client
 
 2. Client khởi động
-   ├── Tạo giao diện đăng nhập JavaFX
-   ├── Kết nối Socket đến server
+   ├── Tạo giao diện đăng nhập JavaFX với CSS styling
+   ├── Kết nối Socket đến server localhost:8888
    └── Bắt đầu thread lắng nghe server
 ```
 
@@ -540,12 +586,14 @@ Client gửi LOGIN/REGISTER → Server xác thực database → Phản hồi SUC
                                                      ↓
                                           Broadcast danh sách user online
                                                      ↓
-                                          Client chuyển sang main menu
+                                          Client chuyển sang main menu với user list
 ```
 
-### 3. Mời chơi game:
+### 3. Mời chợi game:
 ```
-Client A double-click Client B → Gửi INVITE:B → Server gửi GAME_INVITATION:A cho B
+Client A click chuột phải trên Client B → Chọn "Mời chợi" → Gửi INVITE:B
+                                                                    ↓
+                                Server gửi GAME_INVITATION:A cho B
                                                                     ↓
                                 B chọn Accept/Reject → Server nhận phản hồi
                                                                     ↓
@@ -554,38 +602,51 @@ Client A double-click Client B → Gửi INVITE:B → Server gửi GAME_INVITATI
                                       Gửi GAME_STARTED cho cả A và B
 ```
 
-### 4. Chơi game:
+### 4. Chat riêng tư:
+```
+Client A click chuột phải trên Client B → Chọn "Nhắn tin" → Mở ChatWindow
+                                                                    ↓
+                        Nhập tin nhắn và gửi → PRIVATE_MESSAGE:B:content
+                                                                    ↓
+                                Server gửi INCOMING_MESSAGE:A:content cho B
+                                                                    ↓
+                                        B nhận và hiển thị trong ChatWindow
+```
+
+### 5. Chợi game:
 ```
 1. Client nhận GAME_STARTED
    ├── Chuyển sang giao diện game
-   ├── Hiển thị lưới 50 hạt thóc
-   └── Bắt đầu đếm ngược 15 giây
+   ├── Hiển thị lưới 50 Circle (mâu thuẫn với server 70 grains)
+   └── Bắt đầu đếm ngược (client: 15s, server: 200s)
 
 2. Client click hạt thóc
-   ├── Gửi GAME_ACTION:grainIndex
+   ├── Gửi GAME_ACTION:grainIndex (0-49 từ client UI)
    ├── Server chuyển cho GameSession
    ├── GameSession kiểm tra loại hạt
    ├── Cập nhật điểm nếu là thóc
    ├── Gửi GRAIN_RESULT cho người click
    ├── Gửi OPPONENT_SCORE cho đối thủ
-   └── Kiểm tra điều kiện thắng
+   └── Kiểm tra điều kiện thắng (20 hạt thóc)
 
 3. Kết thúc game (hết thời gian hoặc đạt 20 điểm)
    ├── GameSession gửi GAME_ENDED
-   ├── Client hiển thị kết quả
+   ├── Client hiển thị dialog kết quả với options
    ├── Server lưu vào database
-   ├── Cập nhật thống kê người chơi
+   ├── Cập nhật thống kê người chợi
    └── Client về menu chính
 ```
 
-### 5. Các tính năng phụ:
+### 6. Các tính năng phụ:
 ```
 - Xem bảng xếp hạng: GET_LEADERBOARD → Server query database → Hiển thị top 20
-- Thoát game giữa chừng: QUIT_GAME → Tự động thua → Về menu chính
+- Thoát game giữa chừng: QUIT_GAME → Tự động thua → Về menu chính  
+- Chat riêng tư: PRIVATE_MESSAGE → Hiển thị trong ChatWindow
 - Disconnect: Client tự động cleanup → Server remove khỏi online list
+- Context menu: Click chuột phải trên user list → Mời chợi hoặc nhắn tin
 ```
 
-## PROTOCOL GIAO TIẾP
+## PROTOCOL GIAO TIẾP (CẬP NHẬT)
 
 ### Messages từ Client → Server:
 - `LOGIN:username,password`
@@ -594,10 +655,10 @@ Client A double-click Client B → Gửi INVITE:B → Server gửi GAME_INVITATI
 - `INVITE:username`
 - `ACCEPT_INVITATION:username`
 - `REJECT_INVITATION:username`
-- `GAME_ACTION:grainIndex`
+- `GAME_ACTION:grainIndex` (0-49 từ client UI)
 - `GET_LEADERBOARD`
 - `QUIT_GAME`
-- `SEND_MESSAGE:recipient,message`
+- `PRIVATE_MESSAGE:recipient:message`
 
 ### Messages từ Server → Client:
 - `LOGIN_SUCCESS:username` / `LOGIN_FAILED:reason`
@@ -611,28 +672,44 @@ Client A double-click Client B → Gửi INVITE:B → Server gửi GAME_INVITATI
 - `GAME_ENDED:winner,score1,score2`
 - `LEADERBOARD:user1,score1,played1,won1,rate1;...`
 - `INCOMING_MESSAGE:sender:message`
+- `SYSTEM_MESSAGE:content`
 
 ## YÊU CẦU HỆ THỐNG
 
 ### Phần mềm cần thiết:
-- Java 11+ với JavaFX
-- MySQL Server
-- Maven (để build project)
+- Java 18+ với JavaFX (theo pom.xml)
+- MySQL Server 8.0+
+- Maven 3.6+ (để build project)
+
+### Dependencies chính (từ pom.xml):
+- JavaFX Controls, FXML, Web, Swing, Media (18.0.2)
+- MySQL JDBC Driver (qua java.sql module)
+- ControlsFX, FormsFX, ValidatorFX
+- FXGL game library
 
 ### Database setup:
 ```sql
-CREATE DATABASE rice_game;
+CREATE DATABASE rice_game CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- Server sẽ tự động tạo các bảng khi khởi động
 ```
 
-### Cách chạy:
+### Cách chợi:
 1. Khởi động MySQL Server
-2. Chạy `GameServer.main()` để khởi động server
-3. Chạy `GameClient.main()` hoặc `Launcher.main()` cho mỗi client
+2. Cấu hình database connection trong GameServer (DB_USER, DB_PASSWORD)
+3. Chạy `GameServer.main()` để khởi động server
+4. Chạy `GameClient.main()` cho mỗi client
+5. Hoặc dùng Maven: `mvn clean javafx:run`
 
-### Cấu hình:
-- Server port: 8888 (có thể thay đổi trong GameServer.PORT)
+### Cấu hình hiện tại:
+- Server port: 8888
 - Database URL: localhost:3306/rice_game
-- Game duration: 15 giây
-- Target rice: 20 hạt thóc để thắng
-- Total grains: 50 hạt
+- Database user: root, password: 123456
+- **Game duration**: 200 giây (server) vs 15 giây (client UI) - CẦN SỬA
+- **Target rice**: 20 hạt thóc để thắng
+- **Total grains**: 70 (server) vs 50 (client UI) - CẦN SỬA
+
+### Styling:
+- CSS file: `src/main/resources/com/example/gamesocket/styles/styles.css`
+- Dark theme với màu chủ đạo: #2D3436, #636E72, #0984E3
+- Font: Segoe UI, Arial
+- Responsive buttons và form elements
