@@ -254,3 +254,52 @@
     -fx-background-color: #F0E68C;
     -fx-text-fill: #8B4513;
 }
+
+/* ================= TABLE VIEW (LEADERBOARD) ================= */
+.table-view {
+    -fx-background-color: #FFFAF0;
+    -fx-border-color: #DAA520;
+    -fx-border-width: 2;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: linear-gradient(to bottom, #DAA520, #B8860B);
+}
+
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: transparent;
+    -fx-size: 35;
+    -fx-border-color: transparent #B8860B transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 10 0 10;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: #FFFAF0;
+    -fx-text-fill: #2F4F4F;
+    -fx-font-weight: bold;
+}
+
+.table-view .table-row-cell:odd {
+    -fx-background-color: #F5F5DC;
+}
+
+.table-view .table-row-cell:hover {
+    -fx-background-color: #F0E68C;
+    -fx-text-fill: #8B4513;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: #DAA520; 
+    -fx-text-fill: white; 
+}
+
+
