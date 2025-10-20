@@ -1,17 +1,25 @@
 package com.example.gamesocket;
 // GameServer.java
-import java.io.*;
-import java.net.*;
-import java.sql.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GameServer {
     private static final int PORT = 8888;
     private static final String DB_URL = "jdbc:mysql://localhost:3306/rice_game";
     private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "123456";
+    private static final String DB_PASSWORD = "root";
 
     private ServerSocket serverSocket;
     private Map<String, ClientHandler> onlineClients;
