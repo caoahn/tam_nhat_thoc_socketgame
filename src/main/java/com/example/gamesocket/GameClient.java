@@ -1,20 +1,42 @@
 package com.example.gamesocket;
 
 // GameClient.java
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.function.Consumer;
+
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.function.Consumer;
 
 public class GameClient extends Application {
     private static final String SERVER_HOST = "localhost";
@@ -681,38 +703,83 @@ public class GameClient extends Application {
         showGameEndDialog("Kết thúc game", resultMessage, isGameCompleted);
     }
 
-    private void showLeaderboard(String data) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Bảng xếp hạng");
-        alert.setHeaderText("Top người chơi");
+    // Lớp helper để chứa dữ liệu bảng xếp hạng
+    public static class LeaderboardEntry {
+        private final int rank;
+        private final String username;
+        private final int totalScore;
+        private final int gamesPlayed;
+        private final int gamesWon;
+        private final String winRate;
 
-        StringBuilder content = new StringBuilder();
-        content.append(String.format("%-15s %-8s %-8s %-8s %-8s\n", "Tên", "Điểm", "Trận", "Thắng", "Tỷ lệ %"));
-        content.append("=".repeat(60)).append("\n");
+        public LeaderboardEntry(int rank, String username, int totalScore, int gamesPlayed, int gamesWon, String winRate) {
+            this.rank = rank;
+            this.username = username;
+            this.totalScore = totalScore;
+            this.gamesPlayed = gamesPlayed;
+            this.gamesWon = gamesWon;
+            this.winRate = winRate;
+        }
+
+        public int getRank() { return rank; }
+        public String getUsername() { return username; }
+        public int getTotalScore() { return totalScore; }
+        public int getGamesPlayed() { return gamesPlayed; }
+        public int getGamesWon() { return gamesWon; }
+        public String getWinRate() { return winRate; }
+    }
+
+    private void showLeaderboard(String data) {
+        Stage leaderboardStage = new Stage();
+        leaderboardStage.setTitle("Bảng xếp hạng - Top người chơi");
+
+        TableView<LeaderboardEntry> tableView = new TableView<>();
+        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        TableColumn<LeaderboardEntry, Integer> rankCol = new TableColumn<>("Hạng");
+        rankCol.setCellValueFactory(new PropertyValueFactory<>("rank"));
+        rankCol.setStyle("-fx-alignment: CENTER;");
+
+        TableColumn<LeaderboardEntry, String> nameCol = new TableColumn<>("Tên người chơi");
+        nameCol.setCellValueFactory(new PropertyValueFactory<>("username"));
+
+        TableColumn<LeaderboardEntry, Integer> scoreCol = new TableColumn<>("Tổng điểm");
+        scoreCol.setCellValueFactory(new PropertyValueFactory<>("totalScore"));
+
+        TableColumn<LeaderboardEntry, Integer> playedCol = new TableColumn<>("Số trận");
+        playedCol.setCellValueFactory(new PropertyValueFactory<>("gamesPlayed"));
+
+        TableColumn<LeaderboardEntry, Integer> wonCol = new TableColumn<>("Thắng");
+        wonCol.setCellValueFactory(new PropertyValueFactory<>("gamesWon"));
+
+        TableColumn<LeaderboardEntry, String> rateCol = new TableColumn<>("Tỷ lệ thắng");
+        rateCol.setCellValueFactory(new PropertyValueFactory<>("winRate"));
+
+        tableView.getColumns().addAll(rankCol, nameCol, scoreCol, playedCol, wonCol, rateCol);
 
         if (!data.isEmpty()) {
             String[] players = data.split(";");
             int rank = 1;
             for (String playerInfo : players) {
                 if (!playerInfo.trim().isEmpty()) {
-                    String[] parts = playerInfo.split(",");
-                    if (parts.length >= 5) {
-                        String username = parts[0];
-                        int totalScore = Integer.parseInt(parts[1]);
-                        int gamesPlayed = Integer.parseInt(parts[2]);
-                        int gamesWon = Integer.parseInt(parts[3]);
-                        String winRate = parts[4];
-
-                        content.append(String.format("%2d. %-12s %-8d %-8d %-8d %-8s\n",
-                                rank++, username, totalScore, gamesPlayed, gamesWon, winRate + "%"));
-                    }
+                    String[] p = playerInfo.split(",");
+                    tableView.getItems().add(new LeaderboardEntry(rank++, p[0], Integer.parseInt(p[1]), Integer.parseInt(p[2]), Integer.parseInt(p[3]), p[4] + "%"));
                 }
             }
         }
 
-        alert.setContentText(content.toString());
-        alert.getDialogPane().setStyle("-fx-font-family: monospace");
-        alert.showAndWait();
+        VBox layout = new VBox(10);
+        layout.setPadding(new Insets(10));
+        Label title = new Label("🏆 BẢNG XẾP HẠNG 🏆");
+        title.getStyleClass().add("title-label");
+        title.setAlignment(Pos.CENTER);
+        layout.getChildren().addAll(title, tableView);
+        layout.setAlignment(Pos.CENTER);
+
+        Scene scene = new Scene(layout, 650, 500);
+        scene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+        leaderboardStage.setScene(scene);
+        leaderboardStage.show();
     }
 
     private void backToMainMenu() {
@@ -819,4 +886,3 @@ public class GameClient extends Application {
         }
     }
 }
-
