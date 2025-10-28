@@ -199,14 +199,34 @@
     -fx-background-radius: 10;
 }
 
-.alert .dialog-pane .header-panel {
-    -fx-background-color: linear-gradient(to right, #DAA520, #FFD700);
-    -fx-background-radius: 8 8 0 0;
+/* ================= REGISTER FORM STYLING ================= */
+.register-input {
+    -fx-background-color: white;
+    -fx-border-color: #28a745;
+    -fx-border-width: 2;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-font-size: 14px;
+    -fx-padding: 10;
+    -fx-alignment: center;
+    -fx-pref-width: 300;
+    -fx-max-width: 300;
 }
 
-.alert .dialog-pane .header-panel .label {
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
+.register-input:focused {
+    -fx-border-color: #218838;
+    -fx-effect: dropshadow(one-pass-box, rgba(40, 167, 69, 0.5), 5, 0, 0, 0);
+}
+
+/* Đảm bảo các VBox chứa input căn giữa */
+.main-pane VBox {
+    -fx-alignment: center;
+}
+
+/* Căn giữa các label trong form đăng ký */
+.main-pane Label {
+    -fx-alignment: center;
+    -fx-text-alignment: center;
 }
 
 /* ================= ANIMATIONS & EFFECTS ================= */
@@ -301,5 +321,3 @@
     -fx-background-color: #DAA520; 
     -fx-text-fill: white; 
 }
-
-

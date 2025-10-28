@@ -39,8 +39,10 @@ import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 
 public class GameClient extends Application {
-    private static final String SERVER_HOST = "localhost";
+    // private static final String SERVER_HOST = "localhost"; // XÓA dòng này
     private static final int SERVER_PORT = 8888;
+
+    private String serverHost; // Thêm biến động để lưu địa chỉ server
 
     private Socket socket;
     private BufferedReader reader;
@@ -79,7 +81,7 @@ public class GameClient extends Application {
         primaryStage.setResizable(false);
 
         createLoginUI();
-        Scene loginScene = new Scene(loginPane, 400, 350);
+        Scene loginScene = new Scene(loginPane, 400, 400); // Tăng height lên 400 để chứa thêm trường server
 
         // ÁP DỤNG CSS VÀO SCENE
         loginScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
@@ -87,12 +89,14 @@ public class GameClient extends Application {
         primaryStage.setScene(loginScene);
         primaryStage.show();
 
-        connectToServer();
+        // KHÔNG TỰ ĐỘNG CONNECT NỮA - đợi user nhập và bấm đăng nhập
+        // connectToServer();
     }
 
-    private void connectToServer() {
+    private void connectToServer(String host) {
         try {
-            socket = new Socket(SERVER_HOST, SERVER_PORT);
+            this.serverHost = host;
+            socket = new Socket(serverHost, SERVER_PORT);
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             writer = new PrintWriter(socket.getOutputStream(), true);
 
@@ -102,7 +106,10 @@ public class GameClient extends Application {
             messageHandler.start();
 
         } catch (IOException e) {
-            showAlert("Lỗi kết nối", "Không thể kết nối đến server!");
+            Platform.runLater(() -> {
+                showAlert("Lỗi kết nối", "Không thể kết nối đến server tại " + host + ":" + SERVER_PORT +
+                         "\n\nVui lòng kiểm tra:\n- Địa chỉ IP có đúng không?\n- Server đã chạy chưa?\n- Firewall có chặn không?");
+            });
             e.printStackTrace();
         }
     }
@@ -120,6 +127,18 @@ public class GameClient extends Application {
         Label subtitleLabel = new Label("Đăng nhập để bắt đầu chơi");
         subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
 
+        // THÊM TRƯỜNG NHẬP ĐỊA CHỈ SERVER
+        Label serverLabel = new Label("Địa chỉ Server:");
+        serverLabel.setStyle("-fx-font-size: 12px;");
+
+        TextField serverField = new TextField("localhost");
+        serverField.setPromptText("Nhập IP server (ví dụ: 192.168.1.100)");
+        serverField.setMaxWidth(300);
+        serverField.setStyle("-fx-font-size: 12px;");
+
+        Label serverHintLabel = new Label("💡 Nhập 'localhost' nếu chơi 1 mình, hoặc IP của bạn bè");
+        serverHintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #999; -fx-font-style: italic;");
+
         TextField usernameField = new TextField();
         usernameField.setPromptText("Tên đăng nhập");
         usernameField.setMaxWidth(200);
@@ -130,22 +149,50 @@ public class GameClient extends Application {
 
         Button loginButton = new Button("🔑 Đăng nhập");
         loginButton.setOnAction(e -> {
+            String server = serverField.getText().trim();
             String username = usernameField.getText().trim();
             String password = passwordField.getText().trim();
+
+            if (server.isEmpty()) {
+                showAlert("Lỗi", "Vui lòng nhập địa chỉ server!");
+                return;
+            }
+
             if (!username.isEmpty() && !password.isEmpty()) {
-                sendMessage("LOGIN:" + username + "," + password);
+                // Kết nối đến server trước
+                connectToServer(server);
+                // Đợi một chút để kết nối
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(500);
+                        if (socket != null && socket.isConnected()) {
+                            sendMessage("LOGIN:" + username + "," + password);
+                        }
+                    } catch (InterruptedException ex) {
+                        ex.printStackTrace();
+                    }
+                }).start();
             } else {
                 showAlert("Lỗi", "Vui lòng nhập đầy đủ thông tin!");
             }
         });
 
         Button registerButton = new Button("📝 Tạo tài khoản mới");
-        registerButton.setOnAction(e -> showRegisterForm());
+        registerButton.setOnAction(e -> showRegisterForm(serverField.getText().trim()));
 
         HBox buttonBox = new HBox(10, loginButton, registerButton);
         buttonBox.setAlignment(Pos.CENTER);
 
-        loginPane.getChildren().addAll(titleLabel, subtitleLabel, usernameField, passwordField, buttonBox);
+        loginPane.getChildren().addAll(
+            titleLabel,
+            subtitleLabel,
+            serverLabel,
+            serverField,
+            serverHintLabel,
+            usernameField,
+            passwordField,
+            buttonBox
+        );
     }
 
     private void createRegisterUI() {
@@ -161,42 +208,81 @@ public class GameClient extends Application {
         Label subtitleLabel = new Label("Tạo tài khoản mới để tham gia trò chơi");
         subtitleLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
 
+        // TRƯỜNG SERVER - QUAN TRỌNG ĐỂ KẾT NỐI VÀO SERVER TỪ MÁY KHÁC
+        VBox serverBox = new VBox(5);
+        serverBox.setAlignment(Pos.CENTER);
+        Label serverLabel = new Label("Địa chỉ Server:");
+        serverLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold;");
+
+        TextField serverFieldReg = new TextField("localhost");
+        serverFieldReg.setPromptText("Nhập IP server (ví dụ: 192.168.1.100)");
+        serverFieldReg.setPrefWidth(300);
+        serverFieldReg.setMaxWidth(300);
+        serverFieldReg.getStyleClass().add("register-input");
+
+        Label serverHintLabel = new Label("💡 Nếu server ở máy khác, nhập địa chỉ IP của máy đó");
+        serverHintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #999; -fx-font-style: italic;");
+        serverHintLabel.setWrapText(true);
+        serverHintLabel.setMaxWidth(300);
+
+        serverBox.getChildren().addAll(serverLabel, serverFieldReg, serverHintLabel);
+
         // Username field với validation
         VBox usernameBox = new VBox(5);
+        usernameBox.setAlignment(Pos.CENTER);
         Label usernameLabel = new Label("Tên đăng nhập:");
         usernameLabel.setStyle("-fx-font-weight: bold;");
         TextField usernameField = new TextField();
         usernameField.setPromptText("Nhập tên đăng nhập (3-20 ký tự)");
-        usernameField.setMaxWidth(250);
+        usernameField.setPrefWidth(300);
+        usernameField.setMaxWidth(300);
+        usernameField.getStyleClass().add("register-input");
         usernameBox.getChildren().addAll(usernameLabel, usernameField);
 
         // Password field với validation
         VBox passwordBox = new VBox(5);
+        passwordBox.setAlignment(Pos.CENTER);
         Label passwordLabel = new Label("Mật khẩu:");
         passwordLabel.setStyle("-fx-font-weight: bold;");
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Nhập mật khẩu (tối thiểu 6 ký tự)");
-        passwordField.setMaxWidth(250);
+        passwordField.setPrefWidth(300);
+        passwordField.setMaxWidth(300);
+        passwordField.getStyleClass().add("register-input");
         passwordBox.getChildren().addAll(passwordLabel, passwordField);
 
         // Confirm password field
         VBox confirmPasswordBox = new VBox(5);
+        confirmPasswordBox.setAlignment(Pos.CENTER);
         Label confirmPasswordLabel = new Label("Xác nhận mật khẩu:");
         confirmPasswordLabel.setStyle("-fx-font-weight: bold;");
         PasswordField confirmPasswordField = new PasswordField();
         confirmPasswordField.setPromptText("Nhập lại mật khẩu");
-        confirmPasswordField.setMaxWidth(250);
+        confirmPasswordField.setPrefWidth(300);
+        confirmPasswordField.setMaxWidth(300);
+        confirmPasswordField.getStyleClass().add("register-input");
         confirmPasswordBox.getChildren().addAll(confirmPasswordLabel, confirmPasswordField);
+
+        // Status label để hiển thị quá trình kết nối
+        Label statusLabel = new Label("");
+        statusLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #007bff;");
+        statusLabel.setVisible(false);
 
         // Buttons
         Button registerButton = new Button("✨ Đăng ký");
         registerButton.setStyle("-fx-background-color: linear-gradient(to bottom, #28a745, #218838); -fx-text-fill: white; -fx-font-weight: bold;");
         registerButton.setOnAction(e -> {
+            String server = serverFieldReg.getText().trim();
             String username = usernameField.getText().trim();
             String password = passwordField.getText().trim();
             String confirmPassword = confirmPasswordField.getText().trim();
 
-            // Validation
+            // Validation đầy đủ
+            if (server.isEmpty()) {
+                showAlert("Lỗi", "Vui lòng nhập địa chỉ server!\n\nVí dụ:\n- localhost (nếu server trên máy bạn)\n- 192.168.1.100 (nếu server ở máy khác trong cùng mạng)");
+                return;
+            }
+
             if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
                 showAlert("Lỗi", "Vui lòng điền đầy đủ thông tin!");
                 return;
@@ -217,31 +303,112 @@ public class GameClient extends Application {
                 return;
             }
 
-            // Gửi request đăng ký
-            sendMessage("REGISTER:" + username + "," + password);
+            // Disable button và hiển thị trạng thái
+            registerButton.setDisable(true);
+            statusLabel.setText("⏳ Đang kết nối đến server " + server + "...");
+            statusLabel.setVisible(true);
+
+            // Kết nối và đăng ký trong thread riêng
+            new Thread(() -> {
+                try {
+                    // Đóng kết nối cũ nếu có
+                    if (socket != null && !socket.isClosed()) {
+                        try {
+                            socket.close();
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+
+                    // Kết nối đến server
+                    connectToServer(server);
+
+                    // Đợi kết nối được thiết lập
+                    Thread.sleep(800);
+
+                    if (socket != null && socket.isConnected()) {
+                        Platform.runLater(() -> {
+                            statusLabel.setText("✅ Đã kết nối! Đang gửi thông tin đăng ký...");
+                        });
+
+                        // Gửi yêu cầu đăng ký
+                        sendMessage("REGISTER:" + username + "," + password);
+
+                    } else {
+                        Platform.runLater(() -> {
+                            statusLabel.setVisible(false);
+                            registerButton.setDisable(false);
+                            showAlert("Lỗi kết nối",
+                                    "Không thể kết nối đến server tại " + server + ":" + SERVER_PORT +
+                                            "\n\nVui lòng kiểm tra:\n" +
+                                            "1. Server đã chạy chưa?\n" +
+                                            "2. Địa chỉ IP có đúng không?\n" +
+                                            "3. Cùng mạng WiFi/LAN không?\n" +
+                                            "4. Firewall có chặn port " + SERVER_PORT + " không?");
+                        });
+                    }
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            }).start();
         });
 
         Button backButton = new Button("🔙 Quay lại đăng nhập");
-        backButton.setOnAction(e -> showLoginForm());
+        backButton.setOnAction(e -> {
+            // Đóng kết nối nếu có
+            if (socket != null && !socket.isClosed()) {
+                try {
+                    socket.close();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+            showLoginForm();
+        });
 
         HBox buttonBox = new HBox(15, registerButton, backButton);
         buttonBox.setAlignment(Pos.CENTER);
 
-        // Thêm hướng dẫn
-        Label instructionLabel = new Label("💡 Lưu ý: Tên đăng nhập và mật khẩu sẽ được sử dụng để đăng nhập vào game");
+        // Thêm hướng dẫn chi tiết hơn
+        Label instructionLabel = new Label(
+                "📋 Hướng dẫn đăng ký:\n" +
+                        "1. Nhập địa chỉ IP của server (hoặc 'localhost' nếu server trên máy bạn)\n" +
+                        "2. Điền thông tin tài khoản\n" +
+                        "3. Sau khi đăng ký thành công, hãy đăng nhập để chơi!"
+        );
         instructionLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #888; -fx-text-alignment: center;");
         instructionLabel.setWrapText(true);
-        instructionLabel.setMaxWidth(300);
+        instructionLabel.setMaxWidth(350);
 
-        registerPane.getChildren().addAll(titleLabel, subtitleLabel, usernameBox, passwordBox, confirmPasswordBox, buttonBox, instructionLabel);
+        registerPane.getChildren().addAll(
+                titleLabel,
+                subtitleLabel,
+                serverBox,
+                usernameBox,
+                passwordBox,
+                confirmPasswordBox,
+                statusLabel,
+                buttonBox,
+                instructionLabel
+        );
     }
 
-    private void showRegisterForm() {
-        if (registerPane == null) {
-            createRegisterUI();
+    private void showRegisterForm(String serverHost) {
+        // Tạo lại registerPane
+        createRegisterUI();
+
+        // Nếu có serverHost được truyền vào, điền sẵn vào trường server
+        if (serverHost != null && !serverHost.isEmpty()) {
+            // Tìm TextField server trong registerPane và set giá trị
+            registerPane.getChildren().stream()
+                    .filter(node -> node instanceof TextField)
+                    .map(node -> (TextField) node)
+                    .filter(tf -> tf.getPromptText().contains("IP server"))
+                    .findFirst()
+                    .ifPresent(tf -> tf.setText(serverHost));
         }
 
-        Scene registerScene = new Scene(registerPane, 450, 500);
+        Scene registerScene = new Scene(registerPane, 450, 600);
         registerScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
         primaryStage.setScene(registerScene);
     }
@@ -497,9 +664,25 @@ public class GameClient extends Application {
                 break;
 
             case "REGISTER_SUCCESS":
-                showAlert("Thành công", "Đăng ký thành công! Vui lòng đăng nhập.");
-                // Tự động chuyển về form đăng nhập sau khi đăng ký thành công
-                showLoginForm();
+                Platform.runLater(() -> {
+                    // Đóng kết nối hiện tại
+                    try {
+                        if (socket != null && !socket.isClosed()) {
+                            socket.close();
+                        }
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("Đăng ký thành công! 🎉");
+                    successAlert.setHeaderText("Chúc mừng! Tài khoản của bạn đã được tạo");
+                    successAlert.setContentText(
+                            "Tên đăng nhập: " + data + "\n\n" +
+                                    "Bây giờ bạn có thể đăng nhập để bắt đầu chơi!"
+                    );
+                    successAlert.showAndWait();
+                    showLoginForm();
+                });
                 break;
 
             case "ONLINE_USERS":
