@@ -39,6 +39,8 @@ import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 
 public class GameClient extends Application {
+    private static final int SCENE_WIDTH = 1000;
+    private static final int SCENE_HEIGHT = 600;
     // private static final String SERVER_HOST = "localhost"; // XÓA dòng này
     private static final int SERVER_PORT = 8888;
 
@@ -55,6 +57,7 @@ public class GameClient extends Application {
     private VBox mainGamePane;
     private VBox gamePlayPane;
     private VBox gameLobbyPane;
+    private VBox leaderboardPane; // Thêm VBox cho leaderboard
 
     // Game state
     private String currentUsername;
@@ -83,7 +86,7 @@ public class GameClient extends Application {
         primaryStage.setResizable(false);
 
         createLoginUI();
-        Scene loginScene = new Scene(loginPane, 400, 400); // Tăng height lên 400 để chứa thêm trường server
+        Scene loginScene = new Scene(loginPane, SCENE_WIDTH, SCENE_HEIGHT); // Tăng height lên 400 để chứa thêm trường server
 
         // ÁP DỤNG CSS VÀO SCENE
         loginScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
@@ -109,7 +112,7 @@ public class GameClient extends Application {
 
         } catch (IOException e) {
             Platform.runLater(() -> {
-                showAlert("Lỗi kết nối", "Không thể kết nối đến server tại " + host + ":" + SERVER_PORT +
+                showErrorAlert("Lỗi kết nối", "Không thể kết nối đến server tại " + host + ":" + SERVER_PORT +
                          "\n\nVui lòng kiểm tra:\n- Địa chỉ IP có đúng không?\n- Server đã chạy chưa?\n- Firewall có chặn không?");
             });
             e.printStackTrace();
@@ -156,7 +159,7 @@ public class GameClient extends Application {
             String password = passwordField.getText().trim();
 
             if (server.isEmpty()) {
-                showAlert("Lỗi", "Vui lòng nhập địa chỉ server!");
+                showErrorAlert("Lỗi", "Vui lòng nhập địa chỉ server!");
                 return;
             }
 
@@ -175,7 +178,7 @@ public class GameClient extends Application {
                     }
                 }).start();
             } else {
-                showAlert("Lỗi", "Vui lòng nhập đầy đủ thông tin!");
+                showErrorAlert("Lỗi", "Vui lòng nhập đầy đủ thông tin!");
             }
         });
 
@@ -281,27 +284,27 @@ public class GameClient extends Application {
 
             // Validation đầy đủ
             if (server.isEmpty()) {
-                showAlert("Lỗi", "Vui lòng nhập địa chỉ server!\n\nVí dụ:\n- localhost (nếu server trên máy bạn)\n- 192.168.1.100 (nếu server ở máy khác trong cùng mạng)");
+                showErrorAlert("Lỗi", "Vui lòng nhập địa chỉ server!\n\nVí dụ:\n- localhost (nếu server trên máy bạn)\n- 192.168.1.100 (nếu server ở máy khác trong cùng mạng)");
                 return;
             }
 
             if (username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-                showAlert("Lỗi", "Vui lòng điền đầy đủ thông tin!");
+                showErrorAlert("Lỗi", "Vui lòng điền đầy đủ thông tin!");
                 return;
             }
 
             if (username.length() < 3 || username.length() > 20) {
-                showAlert("Lỗi", "Tên đăng nhập phải từ 3-20 ký tự!");
+                showErrorAlert("Lỗi", "Tên đăng nhập phải từ 3-20 ký tự!");
                 return;
             }
 
             if (password.length() < 6) {
-                showAlert("Lỗi", "Mật khẩu phải có ít nhất 6 ký tự!");
+                showErrorAlert("Lỗi", "Mật khẩu phải có ít nhất 6 ký tự!");
                 return;
             }
 
             if (!password.equals(confirmPassword)) {
-                showAlert("Lỗi", "Mật khẩu xác nhận không khớp!");
+                showErrorAlert("Lỗi", "Mật khẩu xác nhận không khớp!");
                 return;
             }
 
@@ -340,7 +343,7 @@ public class GameClient extends Application {
                         Platform.runLater(() -> {
                             statusLabel.setVisible(false);
                             registerButton.setDisable(false);
-                            showAlert("Lỗi kết nối",
+                            showErrorAlert("Lỗi kết nối",
                                     "Không thể kết nối đến server tại " + server + ":" + SERVER_PORT +
                                             "\n\nVui lòng kiểm tra:\n" +
                                             "1. Server đã chạy chưa?\n" +
@@ -410,7 +413,7 @@ public class GameClient extends Application {
                     .ifPresent(tf -> tf.setText(serverHost));
         }
 
-        Scene registerScene = new Scene(registerPane, 450, 600);
+        Scene registerScene = new Scene(registerPane, SCENE_WIDTH, SCENE_HEIGHT);
         registerScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
         primaryStage.setScene(registerScene);
     }
@@ -418,7 +421,7 @@ public class GameClient extends Application {
     private void showLoginForm() {
         // Tạo lại loginPane để tránh lỗi JavaFX Node đã được sử dụng
         createLoginUI();
-        Scene loginScene = new Scene(loginPane, 400, 350);
+        Scene loginScene = new Scene(loginPane, SCENE_WIDTH, SCENE_HEIGHT);
         loginScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
         primaryStage.setScene(loginScene);
     }
@@ -461,9 +464,9 @@ public class GameClient extends Application {
                         if (selectedItem != null) {
                             String targetUsername = selectedItem.split(" - ")[0];
                             if (selectedItem.contains("(BUSY)")) {
-                                showAlert("Không thể mời", targetUsername + " đang ở trong trận!");
+                                showErrorAlert("Không thể mời", targetUsername + " đang ở trong trận!");
                             } else if (targetUsername.equals(currentUsername)) {
-                                showAlert("Không thể mời", "Bạn không thể tự mời chính mình!");
+                                showErrorAlert("Không thể mời", "Bạn không thể tự mời chính mình!");
                             } else {
                                 sendMessage("INVITE:" + targetUsername);
                             }
@@ -616,7 +619,7 @@ public class GameClient extends Application {
 
         // Create 70 grain circles with styling CSS
         for (int i = 0; i < 70; i++) {
-            Circle grain = new Circle(18); // Tăng kích thước lên một chút
+            Circle grain = new Circle(22); // Tăng kích thước lên một chút
 
             // Áp dụng CSS class mặc định
             grain.getStyleClass().addAll("grain-circle", "grain-unclicked");
@@ -663,7 +666,7 @@ public class GameClient extends Application {
                 Platform.runLater(() -> processServerMessage(msg));
             }
         } catch (IOException e) {
-            Platform.runLater(() -> showAlert("Lỗi", "Mất kết nối với server!"));
+            Platform.runLater(() -> showErrorAlert("Lỗi", "Mất kết nối với server!"));
         }
     }
 
@@ -676,7 +679,7 @@ public class GameClient extends Application {
             case "LOGIN_SUCCESS":
                 currentUsername = data;
                 createMainGameUI();
-                Scene mainScene = new Scene(mainGamePane, 500, 400);
+                Scene mainScene = new Scene(mainGamePane, SCENE_WIDTH, SCENE_HEIGHT);
 
                 // Áp dụng CSS cho main scene
                 mainScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
@@ -688,7 +691,7 @@ public class GameClient extends Application {
 
             case "LOGIN_FAILED":
             case "REGISTER_FAILED":
-                showAlert("Lỗi", data);
+                showErrorAlert("Lỗi", data);
                 break;
 
             case "REGISTER_SUCCESS":
@@ -722,7 +725,7 @@ public class GameClient extends Application {
                 break;
 
             case "INVITATION_REJECTED":
-                showAlert("Thông báo", data + " đã từ chối lời mời!");
+                showInfoAlert("Thông báo", data + " đã từ chối lời mời!");
                 break;
 
             case "GAME_STARTED":
@@ -752,7 +755,7 @@ public class GameClient extends Application {
                 });
                 break;
             case "SYSTEM_MESSAGE":
-                showAlert("Thông báo từ Server", data);
+                showInfoAlert("Thông báo từ Server", data);
                 break;
 
 
@@ -766,22 +769,22 @@ public class GameClient extends Application {
                 String[] players = lobbyData[2].split(",");
                 currentLobbyId = lobbyId;
                 createLobbyUI(lobbyId, host, players);
-                Scene lobbyScene = new Scene(gameLobbyPane, 400, 300);
+                Scene lobbyScene = new Scene(gameLobbyPane, SCENE_WIDTH, SCENE_HEIGHT);
                 lobbyScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
                 primaryStage.setScene(lobbyScene);
                 break;
             case "LOBBY_CLOSED":
-                showAlert("Thông báo", "Phòng chờ đã bị đóng do người chơi " + data + " đã thoát.");
+                showInfoAlert("Thông báo", "Phòng chờ đã bị đóng do người chơi " + data + " đã thoát.");
                 backToMainMenu();
                 break;
             case "BUFF_ACTIVATED":
-                showAlert("Buff!", "Bạn đã nhặt được vật phẩm buff! Điểm của bạn được cộng thêm.");
+                showInfoAlert("Buff!", "Bạn đã nhặt được vật phẩm buff! Điểm của bạn được cộng thêm.");
                 break;
             case "DEBUFF_ACTIVATED":
-                showAlert("Debuff!", "Bạn đã bị đối thủ làm giảm điểm!");
+                showInfoAlert("Debuff!", "Bạn đã bị đối thủ làm giảm điểm!");
                 break;
             case "DEBUFF_SUCCESS":
-                showAlert("Thành công!", "Bạn đã làm giảm điểm của đối thủ!");
+                showInfoAlert("Thành công!", "Bạn đã làm giảm điểm của đối thủ!");
                 break;
         }
     }
@@ -843,7 +846,7 @@ public class GameClient extends Application {
         currentScore = 0;
 
         createGamePlayUI();
-        Scene gameScene = new Scene(gamePlayPane, 700, 600);
+        Scene gameScene = new Scene(gamePlayPane, SCENE_WIDTH, SCENE_HEIGHT);
 
         // Áp dụng CSS cho game scene
         gameScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
@@ -972,8 +975,13 @@ public class GameClient extends Application {
     }
 
     private void showLeaderboard(String data) {
-        Stage leaderboardStage = new Stage();
-        leaderboardStage.setTitle("Bảng xếp hạng - Top người chơi");
+        leaderboardPane = new VBox(10);
+        leaderboardPane.setPadding(new Insets(20));
+        leaderboardPane.setAlignment(Pos.CENTER);
+        leaderboardPane.getStyleClass().add("main-pane");
+
+        Label title = new Label("🏆 BẢNG XẾP HẠNG 🏆");
+        title.getStyleClass().add("title-label");
 
         TableView<LeaderboardEntry> tableView = new TableView<>();
         tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -1010,18 +1018,14 @@ public class GameClient extends Application {
             }
         }
 
-        VBox layout = new VBox(10);
-        layout.setPadding(new Insets(10));
-        Label title = new Label("🏆 BẢNG XẾP HẠNG 🏆");
-        title.getStyleClass().add("title-label");
-        title.setAlignment(Pos.CENTER);
-        layout.getChildren().addAll(title, tableView);
-        layout.setAlignment(Pos.CENTER);
+        Button backButton = new Button("Quay lại Menu Chính");
+        backButton.setOnAction(e -> backToMainMenu());
 
-        Scene scene = new Scene(layout, 650, 500);
+        leaderboardPane.getChildren().addAll(title, tableView, backButton);
+
+        Scene scene = new Scene(leaderboardPane, SCENE_WIDTH, SCENE_HEIGHT);
         scene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
-        leaderboardStage.setScene(scene);
-        leaderboardStage.show();
+        primaryStage.setScene(scene);
     }
 
     private void backToMainMenu() {
@@ -1030,7 +1034,7 @@ public class GameClient extends Application {
         currentScore = 0;
         // Tạo lại mainGamePane mới để tránh lỗi VBox đã được sử dụng
         createMainGameUI();
-        Scene mainScene = new Scene(mainGamePane, 500, 400);
+        Scene mainScene = new Scene(mainGamePane, SCENE_WIDTH, SCENE_HEIGHT);
 
         // Áp dụng CSS cho main scene
         mainScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
@@ -1060,7 +1064,7 @@ public class GameClient extends Application {
                 if (result.get() == playAgainButton) {
                     // Quay về menu chính để tìm đối thủ mới
                     backToMainMenu();
-                    showAlert("Thông báo", "Hãy chọn đối thủ để chơi tiếp!");
+                    showErrorAlert("Thông báo", "Hãy chọn đối thủ để chơi tiếp!");
                 } else if (result.get() == leaderboardButton) {
                     // Xem bảng xếp hạng trước rồi về menu chính
                     sendMessage("GET_LEADERBOARD");
@@ -1086,10 +1090,23 @@ public class GameClient extends Application {
         }
     }
 
-    private void showAlert(String title, String message) {
+    private void showErrorAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.getDialogPane().getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+        alert.getDialogPane().getStyleClass().add("error-alert");
+        alert.showAndWait();
+    }
+
+    private void showInfoAlert(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
+        alert.setHeaderText(null);
         alert.setContentText(message);
+        alert.getDialogPane().getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+        alert.getDialogPane().getStyleClass().add("info-alert");
         alert.showAndWait();
     }
 
