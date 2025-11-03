@@ -54,10 +54,12 @@ public class GameClient extends Application {
     private VBox registerPane;  // Thêm pane đăng ký riêng
     private VBox mainGamePane;
     private VBox gamePlayPane;
+    private VBox gameLobbyPane;
 
     // Game state
     private String currentUsername;
     private String currentGameId;
+    private String currentLobbyId;
     private String opponent;
     private int currentScore = 0;
     private int timeRemaining = 15;
@@ -533,6 +535,32 @@ public class GameClient extends Application {
         mainGamePane.getStyleClass().add("root");
     }
 
+    private void createLobbyUI(String lobbyId, String host, String[] players) {
+        gameLobbyPane = new VBox(15);
+        gameLobbyPane.setPadding(new Insets(20));
+        gameLobbyPane.setAlignment(Pos.CENTER);
+        gameLobbyPane.getStyleClass().add("main-pane");
+
+        Label titleLabel = new Label("PHÒNG CHỜ");
+        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+
+        Label lobbyIdLabel = new Label("Mã phòng: " + lobbyId);
+        lobbyIdLabel.setStyle("-fx-font-size: 14px;");
+
+        ListView<String> playerListView = new ListView<>();
+        for (String player : players) {
+            playerListView.getItems().add(player);
+        }
+
+        Button startGameButton = new Button("Bắt đầu chơi");
+        startGameButton.setVisible(currentUsername.equals(host));
+        startGameButton.setOnAction(e -> {
+            sendMessage("START_GAME:" + lobbyId);
+        });
+
+        gameLobbyPane.getChildren().addAll(titleLabel, lobbyIdLabel, playerListView, startGameButton);
+    }
+
     private void openPrivateChat(String recipient) {
         if (openChatWindows.containsKey(recipient)) {
             openChatWindows.get(recipient).toFront();
@@ -586,8 +614,8 @@ public class GameClient extends Application {
         grainGrid.setVgap(8);
         grainGrid.getStyleClass().add("game-grid");
 
-        // Create 50 grain circles với styling CSS
-        for (int i = 0; i < 50; i++) {
+        // Create 70 grain circles with styling CSS
+        for (int i = 0; i < 70; i++) {
             Circle grain = new Circle(18); // Tăng kích thước lên một chút
 
             // Áp dụng CSS class mặc định
@@ -731,6 +759,30 @@ public class GameClient extends Application {
             case "LEADERBOARD":
                 showLeaderboard(data);
                 break;
+            case "LOBBY_READY":
+                String[] lobbyData = data.split(":", 3);
+                String lobbyId = lobbyData[0];
+                String host = lobbyData[1];
+                String[] players = lobbyData[2].split(",");
+                currentLobbyId = lobbyId;
+                createLobbyUI(lobbyId, host, players);
+                Scene lobbyScene = new Scene(gameLobbyPane, 400, 300);
+                lobbyScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+                primaryStage.setScene(lobbyScene);
+                break;
+            case "LOBBY_CLOSED":
+                showAlert("Thông báo", "Phòng chờ đã bị đóng do người chơi " + data + " đã thoát.");
+                backToMainMenu();
+                break;
+            case "BUFF_ACTIVATED":
+                showAlert("Buff!", "Bạn đã nhặt được vật phẩm buff! Điểm của bạn được cộng thêm.");
+                break;
+            case "DEBUFF_ACTIVATED":
+                showAlert("Debuff!", "Bạn đã bị đối thủ làm giảm điểm!");
+                break;
+            case "DEBUFF_SUCCESS":
+                showAlert("Thành công!", "Bạn đã làm giảm điểm của đối thủ!");
+                break;
         }
     }
 
@@ -828,18 +880,25 @@ public class GameClient extends Application {
         String grainType = parts[1];
         currentScore = Integer.parseInt(parts[2]);
 
-        // Update grain appearance với CSS classes
+        // Update grain appearance with CSS classes
         Circle grain = (Circle) grainGrid.getChildren().get(grainIndex);
 
         // Remove old style classes
-        grain.getStyleClass().removeAll("grain-unclicked", "grain-rice", "grain-chaff");
+        grain.getStyleClass().removeAll("grain-unclicked", "grain-rice", "grain-chaff", "grain-buff", "grain-debuff");
 
-        if (grainType.equals("RICE")) {
-            // Hạt gạo (thóc đã bóc vỏ) - màu trắng ngà với hiệu ứng xanh
-            grain.getStyleClass().add("grain-rice");
-        } else {
-            // Hạt trấu/thóc lép - màu nâu đậm với hiệu ứng đỏ
-            grain.getStyleClass().add("grain-chaff");
+        switch (grainType) {
+            case "RICE":
+                grain.getStyleClass().add("grain-rice");
+                break;
+            case "SCORE_BUFF":
+                grain.getStyleClass().add("grain-buff");
+                break;
+            case "SCORE_DEBUFF":
+                grain.getStyleClass().add("grain-debuff");
+                break;
+            default:
+                grain.getStyleClass().add("grain-chaff");
+                break;
         }
 
         scoreLabel.setText("🌾 Điểm của bạn: " + currentScore);

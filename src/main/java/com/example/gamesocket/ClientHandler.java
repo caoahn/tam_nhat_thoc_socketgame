@@ -11,6 +11,7 @@ public class ClientHandler implements Runnable {
     private String username;
     private boolean inGame;
     private String currentGameId;
+    private String currentLobbyId;
 
     public ClientHandler(Socket socket, GameServer server) {
         this.socket = socket;
@@ -76,6 +77,9 @@ public class ClientHandler implements Runnable {
                     String messageContent = chatParts[1];
                     server.sendPrivateMessage(this.username, recipient, messageContent);
                 }
+                break;
+            case "START_GAME":
+                server.handleStartGameRequest(data, username);
                 break;
             case "QUIT_GAME":
                 handleQuitGame();
@@ -163,6 +167,14 @@ public class ClientHandler implements Runnable {
         this.currentGameId = currentGameId;
     }
 
+    public String getCurrentLobbyId() {
+        return currentLobbyId;
+    }
+
+    public void setCurrentLobbyId(String currentLobbyId) {
+        this.currentLobbyId = currentLobbyId;
+    }
+
     public String getUsername() {
         return username;
     }
@@ -175,6 +187,10 @@ public class ClientHandler implements Runnable {
 
             if (inGame && currentGameId != null) {
                 handleQuitGame();
+            }
+
+            if (currentLobbyId != null) {
+                server.handleLobbyClose(currentLobbyId, username);
             }
 
             if (reader != null) reader.close();

@@ -1,27 +1,38 @@
 package com.example.gamesocket;
 // GameServer.java
-import java.io.*;
-import java.net.*;
-import java.sql.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GameServer {
     private static final int PORT = 8888;
     private static final String DB_URL = "jdbc:mysql://localhost:3306/rice_game";
     private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "123456";
+    private static final String DB_PASSWORD = "root";
 
     private ServerSocket serverSocket;
     private Map<String, ClientHandler> onlineClients;
     private Map<String, GameSession> activeSessions;
+    private Map<String, GameLobby> activeLobbies; // Add this line
     private ExecutorService executor;
     private AtomicInteger gameIdCounter;
 
     public GameServer() {
         onlineClients = new ConcurrentHashMap<>();
         activeSessions = new ConcurrentHashMap<>();
+        activeLobbies = new ConcurrentHashMap<>(); // Add this line
         executor = Executors.newCachedThreadPool();
         gameIdCounter = new AtomicInteger(1);
         initializeDatabase();
@@ -150,15 +161,41 @@ public class GameServer {
         ClientHandler inviterClient = onlineClients.get(inviter);
         if (inviterClient != null) {
             if (accepted) {
-                startGame(inviter, invited);
+                // Create a new lobby
+                String lobbyId = "LOBBY_" + gameIdCounter.getAndIncrement();
+                GameLobby lobby = new GameLobby(lobbyId, inviter, this);
+                lobby.addPlayer(invited);
+                activeLobbies.put(lobbyId, lobby);
+
+                // Notify players that the lobby is ready
+                lobby.startLobby();
             } else {
                 inviterClient.sendMessage("INVITATION_REJECTED:" + invited);
             }
         }
     }
 
-    private void startGame(String player1, String player2) {
+    public void handleStartGameRequest(String lobbyId, String player) {
+        GameLobby lobby = activeLobbies.get(lobbyId);
+        if (lobby != null) {
+            if (lobby.getHost().equals(player)) {
+                startGame(lobby);
+            } else {
+                // Notify player that they are not the host
+                ClientHandler client = onlineClients.get(player);
+                if (client != null) {
+                    client.sendMessage("SYSTEM_MESSAGE:You are not the host of the lobby.");
+                }
+            }
+        }
+    }
+
+    private void startGame(GameLobby lobby) {
         String gameId = "GAME_" + gameIdCounter.getAndIncrement();
+        List<String> players = lobby.getPlayers();
+        String player1 = players.get(0);
+        String player2 = players.get(1);
+
         GameSession session = new GameSession(gameId, player1, player2, this);
         activeSessions.put(gameId, session);
 
@@ -173,6 +210,22 @@ public class GameServer {
 
             session.startGame();
             broadcastOnlineUsers();
+        }
+
+        activeLobbies.remove(lobby.getLobbyId());
+    }
+
+    public void handleLobbyClose(String lobbyId, String disconnectedPlayer) {
+        GameLobby lobby = activeLobbies.get(lobbyId);
+        if (lobby != null) {
+            lobby.removePlayer(disconnectedPlayer);
+            for (String player : lobby.getPlayers()) {
+                ClientHandler client = onlineClients.get(player);
+                if (client != null) {
+                    client.sendMessage("LOBBY_CLOSED:" + disconnectedPlayer);
+                }
+            }
+            activeLobbies.remove(lobbyId);
         }
     }
 

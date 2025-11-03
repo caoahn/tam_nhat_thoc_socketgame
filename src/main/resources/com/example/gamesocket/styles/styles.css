@@ -229,12 +229,6 @@
     -fx-text-alignment: center;
 }
 
-/* ================= ANIMATIONS & EFFECTS ================= */
-@keyframes pulse {
-    0% { -fx-scale-x: 1; -fx-scale-y: 1; }
-    50% { -fx-scale-x: 1.05; -fx-scale-y: 1.05; }
-    100% { -fx-scale-x: 1; -fx-scale-y: 1; }
-}
 
 .pulse-animation {
     -fx-animation: pulse 0.8s ease-in-out infinite;
@@ -320,4 +314,19 @@
 .table-view .table-row-cell:selected {
     -fx-background-color: #DAA520; 
     -fx-text-fill: white; 
+}
+
+/* ================= BUFF/DEBUFF STYLING ================= */
+.grain-buff {
+    -fx-fill: radial-gradient(center 30% 30%, radius 60%, #FFD700, #FFA500);
+    -fx-stroke: #FFD700;
+    -fx-stroke-width: 2;
+    -fx-effect: dropshadow(three-pass-box, rgba(255,215,0,0.8), 10, 0, 0, 0);
+}
+
+.grain-debuff {
+    -fx-fill: radial-gradient(center 30% 30%, radius 60%, #8A2BE2, #4B0082);
+    -fx-stroke: #4B0082;
+    -fx-stroke-width: 2;
+    -fx-effect: dropshadow(three-pass-box, rgba(138,43,226,0.8), 10, 0, 0, 0);
 }

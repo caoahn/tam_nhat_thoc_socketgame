@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class GameSession {
+    private enum ItemType { RICE, CHAFF, SCORE_BUFF, SCORE_DEBUFF }
     private static final int TOTAL_GRAINS = 70;
     private static final int TARGET_RICE = 20;
     private static final int GAME_DURATION = 15; // seconds
@@ -15,7 +16,7 @@ public class GameSession {
 
     private Map<String, Integer> playerScores;
     private Map<String, Set<Integer>> playerClicks;
-    private boolean[] grainTypes; // true = rice, false = chaff
+    private ItemType[] itemTypes;
     private Timer gameTimer;
     private long gameStartTime;
     private boolean gameEnded;
@@ -35,21 +36,43 @@ public class GameSession {
         playerClicks.put(player1, new HashSet<>());
         playerClicks.put(player2, new HashSet<>());
 
-        initializeGrains();
+        initializeItems();
     }
 
-    private void initializeGrains() {
-        grainTypes = new boolean[TOTAL_GRAINS];
+    private void initializeItems() {
+        itemTypes = new ItemType[TOTAL_GRAINS];
+        Arrays.fill(itemTypes, ItemType.CHAFF); // Default to chaff
         Random random = new Random();
 
-        // Đảm bảo có ít nhất TARGET_RICE hạt thóc
-        Set<Integer> ricePositions = new HashSet<>();
-        while (ricePositions.size() < TARGET_RICE + 5) { // Thêm một ít hạt thóc
-            ricePositions.add(random.nextInt(TOTAL_GRAINS));
+        // Place rice
+        Set<Integer> positions = new HashSet<>();
+        for (int i = 0; i < TARGET_RICE + 5; i++) {
+            int pos;
+            do {
+                pos = random.nextInt(TOTAL_GRAINS);
+            } while (positions.contains(pos));
+            positions.add(pos);
+            itemTypes[pos] = ItemType.RICE;
         }
 
-        for (int pos : ricePositions) {
-            grainTypes[pos] = true; // true = rice
+        // Place score buffs
+        for (int i = 0; i < 3; i++) {
+            int pos;
+            do {
+                pos = random.nextInt(TOTAL_GRAINS);
+            } while (positions.contains(pos));
+            positions.add(pos);
+            itemTypes[pos] = ItemType.SCORE_BUFF;
+        }
+
+        // Place score debuffs
+        for (int i = 0; i < 2; i++) {
+            int pos;
+            do {
+                pos = random.nextInt(TOTAL_GRAINS);
+            } while (positions.contains(pos));
+            positions.add(pos);
+            itemTypes[pos] = ItemType.SCORE_DEBUFF;
         }
     }
 
@@ -91,40 +114,64 @@ public class GameSession {
 
         Set<Integer> playerClickSet = playerClicks.get(player);
         if (playerClickSet.contains(grainIndex)) {
-            return; // Đã click rồi
+            return; // Already clicked
         }
 
         playerClickSet.add(grainIndex);
 
-        boolean isRice = grainTypes[grainIndex];
-        if (isRice) {
-            int newScore = playerScores.get(player) + 1;
-            playerScores.put(player, newScore);
+        ItemType itemType = itemTypes[grainIndex];
+        ClientHandler client = server.getOnlineClients().get(player);
+        String opponent = player.equals(player1) ? player2 : player1;
+        ClientHandler opponentClient = server.getOnlineClients().get(opponent);
 
-            // Gửi kết quả click cho người chơi
-            ClientHandler client = server.getOnlineClients().get(player);
-            if (client != null) {
-                client.sendMessage("GRAIN_RESULT:" + grainIndex + ",RICE," + newScore);
-            }
-
-            // Thông báo cho đối thủ
-            String opponent = player.equals(player1) ? player2 : player1;
-            ClientHandler opponentClient = server.getOnlineClients().get(opponent);
-            if (opponentClient != null) {
-                opponentClient.sendMessage("OPPONENT_SCORE:" + player + "," + newScore);
-            }
-
-            // Kiểm tra điều kiện thắng
-            if (newScore >= TARGET_RICE) {
-                endGame(player);
-                return;
-            }
-        } else {
-            // Hạt gạo/trấu
-            ClientHandler client = server.getOnlineClients().get(player);
-            if (client != null) {
-                client.sendMessage("GRAIN_RESULT:" + grainIndex + ",CHAFF," + playerScores.get(player));
-            }
+        switch (itemType) {
+            case RICE:
+                int newScore = playerScores.get(player) + 1;
+                playerScores.put(player, newScore);
+                if (client != null) {
+                    client.sendMessage("GRAIN_RESULT:" + grainIndex + ",RICE," + newScore);
+                }
+                if (opponentClient != null) {
+                    opponentClient.sendMessage("OPPONENT_SCORE:" + player + "," + newScore);
+                }
+                if (newScore >= TARGET_RICE) {
+                    endGame(player);
+                    return;
+                }
+                break;
+            case SCORE_BUFF:
+                int buffedScore = playerScores.get(player) + 3;
+                playerScores.put(player, buffedScore);
+                if (client != null) {
+                    client.sendMessage("GRAIN_RESULT:" + grainIndex + ",SCORE_BUFF," + buffedScore);
+                    client.sendMessage("BUFF_ACTIVATED:SCORE_UP");
+                }
+                if (opponentClient != null) {
+                    opponentClient.sendMessage("OPPONENT_SCORE:" + player + "," + buffedScore);
+                }
+                if (buffedScore >= TARGET_RICE) {
+                    endGame(player);
+                    return;
+                }
+                break;
+            case SCORE_DEBUFF:
+                int opponentScore = playerScores.get(opponent) - 2;
+                if (opponentScore < 0) opponentScore = 0;
+                playerScores.put(opponent, opponentScore);
+                if (client != null) {
+                    client.sendMessage("GRAIN_RESULT:" + grainIndex + ",SCORE_DEBUFF," + playerScores.get(player));
+                    client.sendMessage("DEBUFF_SUCCESS:SCORE_DOWN");
+                }
+                if (opponentClient != null) {
+                    opponentClient.sendMessage("OPPONENT_SCORE:" + opponent + "," + opponentScore);
+                    opponentClient.sendMessage("DEBUFF_ACTIVATED:SCORE_DOWN");
+                }
+                break;
+            case CHAFF:
+                if (client != null) {
+                    client.sendMessage("GRAIN_RESULT:" + grainIndex + ",CHAFF," + playerScores.get(player));
+                }
+                break;
         }
     }
 
