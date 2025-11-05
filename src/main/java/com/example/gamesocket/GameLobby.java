@@ -45,7 +45,27 @@ public class GameLobby {
             ClientHandler client = server.getOnlineClients().get(player);
             if (client != null) {
                 client.sendMessage("LOBBY_READY:" + lobbyId + ":" + host + ":" + String.join(",", players));
+                // Set lobby ID for each player
+                client.setCurrentLobbyId(lobbyId);
+                // Set inGame to true so other players can't invite them
+                client.setInGame(true);
             }
         }
+        // Broadcast updated online users to show BUSY status
+        server.broadcastOnlineUsers();
+    }
+
+    public void notifyPlayersUpdate() {
+        // Notify all players about the updated player list
+        for (String player : players) {
+            ClientHandler client = server.getOnlineClients().get(player);
+            if (client != null) {
+                client.sendMessage("LOBBY_UPDATE:" + lobbyId + ":" + host + ":" + String.join(",", players));
+            }
+        }
+    }
+
+    public int getPlayerCount() {
+        return players.size();
     }
 }

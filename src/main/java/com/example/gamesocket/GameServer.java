@@ -20,7 +20,7 @@ public class GameServer {
     private static final int PORT = 8888;
     private static final String DB_URL = "jdbc:mysql://localhost:3306/rice_game";
     private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "root";
+    private static final String DB_PASSWORD = "123456";
 
     private ServerSocket serverSocket;
     private Map<String, ClientHandler> onlineClients;
@@ -152,8 +152,23 @@ public class GameServer {
 
     public void handleGameInvitation(String inviter, String invited) {
         ClientHandler invitedClient = onlineClients.get(invited);
-        if (invitedClient != null && !invitedClient.isInGame()) {
-            invitedClient.sendMessage("GAME_INVITATION:" + inviter);
+        ClientHandler inviterClient = onlineClients.get(inviter);
+
+        if (invitedClient != null) {
+            if (invitedClient.isInGame()) {
+                // Người được mời đang trong game hoặc lobby
+                if (inviterClient != null) {
+                    inviterClient.sendMessage("SYSTEM_MESSAGE:Không thể mời " + invited + "! Họ đang bận (trong trận hoặc phòng chờ).");
+                }
+            } else {
+                // Gửi lời mời
+                invitedClient.sendMessage("GAME_INVITATION:" + inviter);
+            }
+        } else {
+            // Người được mời không online
+            if (inviterClient != null) {
+                inviterClient.sendMessage("SYSTEM_MESSAGE:Không thể mời " + invited + "! Họ không trực tuyến.");
+            }
         }
     }
 
@@ -179,12 +194,20 @@ public class GameServer {
         GameLobby lobby = activeLobbies.get(lobbyId);
         if (lobby != null) {
             if (lobby.getHost().equals(player)) {
+                // Kiểm tra số lượng người chơi trước khi bắt đầu
+                if (lobby.getPlayerCount() < 2) {
+                    ClientHandler client = onlineClients.get(player);
+                    if (client != null) {
+                        client.sendMessage("SYSTEM_MESSAGE:Không thể bắt đầu game! Cần ít nhất 2 người chơi.");
+                    }
+                    return;
+                }
                 startGame(lobby);
             } else {
                 // Notify player that they are not the host
                 ClientHandler client = onlineClients.get(player);
                 if (client != null) {
-                    client.sendMessage("SYSTEM_MESSAGE:You are not the host of the lobby.");
+                    client.sendMessage("SYSTEM_MESSAGE:Chỉ host mới có thể bắt đầu game.");
                 }
             }
         }
@@ -218,15 +241,62 @@ public class GameServer {
     public void handleLobbyClose(String lobbyId, String disconnectedPlayer) {
         GameLobby lobby = activeLobbies.get(lobbyId);
         if (lobby != null) {
-            lobby.removePlayer(disconnectedPlayer);
-            for (String player : lobby.getPlayers()) {
-                ClientHandler client = onlineClients.get(player);
-                if (client != null) {
-                    client.sendMessage("LOBBY_CLOSED:" + disconnectedPlayer);
+            String host = lobby.getHost();
+
+            // Nếu host rời phòng, hủy lobby và đuổi tất cả người chơi
+            if (disconnectedPlayer.equals(host)) {
+                System.out.println("Host " + disconnectedPlayer + " left lobby " + lobbyId + ". Closing lobby.");
+
+                // Thông báo cho tất cả người chơi còn lại
+                for (String player : lobby.getPlayers()) {
+                    if (!player.equals(disconnectedPlayer)) {
+                        ClientHandler client = onlineClients.get(player);
+                        if (client != null) {
+                            client.sendMessage("LOBBY_CLOSED:" + disconnectedPlayer);
+                            client.setCurrentLobbyId(null);
+                            client.setInGame(false); // Reset trạng thái về FREE
+                        }
+                    }
+                }
+
+                // Xóa lobby hoàn toàn
+                activeLobbies.remove(lobbyId);
+
+                // Reset trạng thái của host
+                ClientHandler hostClient = onlineClients.get(disconnectedPlayer);
+                if (hostClient != null) {
+                    hostClient.setCurrentLobbyId(null);
+                    hostClient.setInGame(false); // Reset trạng thái về FREE
                 }
             }
-            activeLobbies.remove(lobbyId);
+            // Nếu người chơi thường rời phòng
+            else {
+                System.out.println("Player " + disconnectedPlayer + " left lobby " + lobbyId);
+
+                lobby.removePlayer(disconnectedPlayer);
+
+                // Reset trạng thái của người rời
+                ClientHandler playerClient = onlineClients.get(disconnectedPlayer);
+                if (playerClient != null) {
+                    playerClient.setCurrentLobbyId(null);
+                    playerClient.setInGame(false); // Reset trạng thái về FREE
+                }
+
+                // Gửi thông báo cho những người còn lại và cập nhật UI
+                if (lobby.getPlayerCount() >= 1) {
+                    // Cập nhật danh sách người chơi cho những người còn lại
+                    lobby.notifyPlayersUpdate();
+                }
+            }
+
+            // Broadcast cập nhật danh sách online users
+            broadcastOnlineUsers();
         }
+    }
+
+    public void handleLobbyLeave(String lobbyId, String playerName) {
+        // Gọi lại handleLobbyClose vì logic giống nhau
+        handleLobbyClose(lobbyId, playerName);
     }
 
     public void handleGameAction(String gameId, String player, int grainIndex) {

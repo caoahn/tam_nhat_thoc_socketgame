@@ -81,6 +81,9 @@ public class ClientHandler implements Runnable {
             case "START_GAME":
                 server.handleStartGameRequest(data, username);
                 break;
+            case "LEAVE_LOBBY":
+                handleLeaveLobby();
+                break;
             case "QUIT_GAME":
                 handleQuitGame();
                 break;
@@ -142,6 +145,14 @@ public class ClientHandler implements Runnable {
             setInGame(false);
             setCurrentGameId(null);
             server.broadcastOnlineUsers();
+        }
+    }
+
+    private void handleLeaveLobby() {
+        if (currentLobbyId != null) {
+            server.handleLobbyLeave(currentLobbyId, username);
+            setCurrentLobbyId(null);
+            sendMessage("LEAVE_LOBBY_SUCCESS");
         }
     }
 

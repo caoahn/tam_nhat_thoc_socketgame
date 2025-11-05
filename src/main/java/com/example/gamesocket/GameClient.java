@@ -29,11 +29,13 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
@@ -76,6 +78,10 @@ public class GameClient extends Application {
     private ListView<String> userListView;
     private Map<String, UserInfo> onlineUsers;
     private Map<String, ChatWindow> openChatWindows = new HashMap<>();
+
+    // Lobby chat components
+    private TextArea lobbyChatArea;
+    private TextField lobbyChatInput;
 
     @Override
     public void start(Stage primaryStage) {
@@ -464,7 +470,7 @@ public class GameClient extends Application {
                         if (selectedItem != null) {
                             String targetUsername = selectedItem.split(" - ")[0];
                             if (selectedItem.contains("(BUSY)")) {
-                                showErrorAlert("Không thể mời", targetUsername + " đang ở trong trận!");
+                                showErrorAlert("Không thể mời", targetUsername + " đang bận!");
                             } else if (targetUsername.equals(currentUsername)) {
                                 showErrorAlert("Không thể mời", "Bạn không thể tự mời chính mình!");
                             } else {
@@ -539,29 +545,146 @@ public class GameClient extends Application {
     }
 
     private void createLobbyUI(String lobbyId, String host, String[] players) {
-        gameLobbyPane = new VBox(15);
-        gameLobbyPane.setPadding(new Insets(20));
-        gameLobbyPane.setAlignment(Pos.CENTER);
-        gameLobbyPane.getStyleClass().add("main-pane");
+        // Sử dụng BorderPane thay vì VBox để có bố cục linh hoạt hơn
+        BorderPane lobbyBorderPane = new BorderPane();
+        lobbyBorderPane.setPadding(new Insets(20));
+        lobbyBorderPane.getStyleClass().add("main-pane");
 
-        Label titleLabel = new Label("PHÒNG CHỜ");
-        titleLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        // TOP: Tiêu đề và thông tin phòng
+        VBox topBox = new VBox(10);
+        topBox.setAlignment(Pos.CENTER);
+
+        Label titleLabel = new Label("🎮 PHÒNG CHỜ 🎮");
+        titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
 
         Label lobbyIdLabel = new Label("Mã phòng: " + lobbyId);
-        lobbyIdLabel.setStyle("-fx-font-size: 14px;");
+        lobbyIdLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #7f8c8d;");
+
+        Label hostLabel = new Label("Host: " + host);
+        hostLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+
+        topBox.getChildren().addAll(titleLabel, lobbyIdLabel, hostLabel);
+        lobbyBorderPane.setTop(topBox);
+
+        // CENTER: HBox chứa danh sách người chơi và chat
+        HBox centerBox = new HBox(20);
+        centerBox.setAlignment(Pos.TOP_CENTER);
+        centerBox.setPadding(new Insets(20, 0, 10, 0));
+
+        // LEFT: Danh sách người chơi
+        VBox playerBox = new VBox(10);
+        playerBox.setPrefWidth(300);
+        playerBox.setAlignment(Pos.TOP_CENTER);
+
+        Label playersLabel = new Label("👥 Người chơi trong phòng");
+        playersLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #27ae60;");
 
         ListView<String> playerListView = new ListView<>();
+        playerListView.setPrefHeight(250);
+        playerListView.setStyle("-fx-font-size: 14px;");
         for (String player : players) {
-            playerListView.getItems().add(player);
+            String displayText = player.equals(host) ? player + " 👑 (Host)" : player;
+            playerListView.getItems().add(displayText);
         }
 
-        Button startGameButton = new Button("Bắt đầu chơi");
+        Label readyLabel = new Label("✅ Sẵn sàng chơi!");
+        readyLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #16a085; -fx-font-style: italic;");
+
+        playerBox.getChildren().addAll(playersLabel, playerListView, readyLabel);
+
+        // RIGHT: Khung chat
+        VBox chatBox = new VBox(10);
+        chatBox.setPrefWidth(400);
+        chatBox.setAlignment(Pos.TOP_CENTER);
+
+        Label chatLabel = new Label("💬 Trò chuyện với đối thủ");
+        chatLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2980b9;");
+
+        lobbyChatArea = new TextArea();
+        lobbyChatArea.setEditable(false);
+        lobbyChatArea.setWrapText(true);
+        lobbyChatArea.setPrefHeight(250);
+        lobbyChatArea.setPromptText("Các tin nhắn sẽ hiển thị ở đây...");
+        lobbyChatArea.getStyleClass().add("lobby-chat-area");
+
+        HBox chatInputBox = new HBox(5);
+        lobbyChatInput = new TextField();
+        lobbyChatInput.setPromptText("Nhập tin nhắn và nhấn Enter...");
+        lobbyChatInput.setPrefWidth(320);
+        lobbyChatInput.getStyleClass().add("lobby-chat-input");
+        HBox.setHgrow(lobbyChatInput, Priority.ALWAYS);
+
+        Button sendChatButton = new Button("Gửi");
+        sendChatButton.getStyleClass().add("lobby-chat-send-button");
+
+        // Xử lý gửi tin nhắn
+        Runnable sendLobbyMessage = () -> {
+            String message = lobbyChatInput.getText().trim();
+            if (!message.isEmpty()) {
+                // Tìm đối thủ (người chơi khác trong phòng)
+                String opponent = null;
+                for (String player : players) {
+                    if (!player.equals(currentUsername)) {
+                        opponent = player;
+                        break;
+                    }
+                }
+
+                if (opponent != null) {
+                    sendMessage("PRIVATE_MESSAGE:" + opponent + ":" + message);
+                    lobbyChatArea.appendText(currentUsername + " (Bạn): " + message + "\n");
+                    lobbyChatInput.clear();
+                }
+            }
+        };
+
+        sendChatButton.setOnAction(e -> sendLobbyMessage.run());
+        lobbyChatInput.setOnAction(e -> sendLobbyMessage.run());
+
+        chatInputBox.getChildren().addAll(lobbyChatInput, sendChatButton);
+
+        Label chatHintLabel = new Label("💡 Chat này chỉ hiển thị trong phòng chờ");
+        chatHintLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #95a5a6; -fx-font-style: italic;");
+
+        chatBox.getChildren().addAll(chatLabel, lobbyChatArea, chatInputBox, chatHintLabel);
+
+        centerBox.getChildren().addAll(playerBox, chatBox);
+        lobbyBorderPane.setCenter(centerBox);
+
+        // BOTTOM: Nút bắt đầu chơi và hủy
+        VBox bottomBox = new VBox(10);
+        bottomBox.setAlignment(Pos.CENTER);
+
+        Button startGameButton = new Button("🎯 BẮT ĐẦU CHƠI");
         startGameButton.setVisible(currentUsername.equals(host));
+        startGameButton.setStyle("-fx-font-size: 16px; -fx-background-color: linear-gradient(to bottom, #27ae60, #229954); -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 10 30 10 30;");
         startGameButton.setOnAction(e -> {
             sendMessage("START_GAME:" + lobbyId);
         });
 
-        gameLobbyPane.getChildren().addAll(titleLabel, lobbyIdLabel, playerListView, startGameButton);
+        Button cancelButton = new Button("Rời phòng");
+        cancelButton.setStyle("-fx-font-size: 12px; -fx-background-color: #e74c3c; -fx-text-fill: white;");
+        cancelButton.setOnAction(e -> {
+            sendMessage("LEAVE_LOBBY:" + lobbyId);
+            currentLobbyId = null;
+            backToMainMenu();
+        });
+
+        if (currentUsername.equals(host)) {
+            Label hostHintLabel = new Label("Bạn là host, nhấn nút trên để bắt đầu game!");
+            hostHintLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #e67e22; -fx-font-weight: bold;");
+            bottomBox.getChildren().addAll(hostHintLabel, startGameButton, cancelButton);
+        } else {
+            Label waitingLabel = new Label("⏳ Đang chờ host bắt đầu game...");
+            waitingLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #f39c12; -fx-font-style: italic;");
+            bottomBox.getChildren().addAll(waitingLabel, cancelButton);
+        }
+
+        lobbyBorderPane.setBottom(bottomBox);
+        BorderPane.setMargin(bottomBox, new Insets(10, 0, 0, 0));
+
+        gameLobbyPane = new VBox(lobbyBorderPane);
+        gameLobbyPane.getStyleClass().add("root");
     }
 
     private void openPrivateChat(String recipient) {
@@ -748,10 +871,16 @@ public class GameClient extends Application {
                 String sender = chatParts[0];
                 String content = chatParts[1];
                 Platform.runLater(() -> {
-                    if (!openChatWindows.containsKey(sender)) {
-                        openPrivateChat(sender);
+                    // Nếu đang ở trong lobby, hiển thị tin nhắn trong lobbyChatArea
+                    if (lobbyChatArea != null && currentLobbyId != null) {
+                        lobbyChatArea.appendText(sender + ": " + content + "\n");
+                    } else {
+                        // Nếu không, mở cửa sổ chat riêng như bình thường
+                        if (!openChatWindows.containsKey(sender)) {
+                            openPrivateChat(sender);
+                        }
+                        openChatWindows.get(sender).appendMessage(sender + ": " + content);
                     }
-                    openChatWindows.get(sender).appendMessage(sender + ": " + content);
                 });
                 break;
             case "SYSTEM_MESSAGE":
@@ -774,17 +903,47 @@ public class GameClient extends Application {
                 primaryStage.setScene(lobbyScene);
                 break;
             case "LOBBY_CLOSED":
-                showInfoAlert("Thông báo", "Phòng chờ đã bị đóng do người chơi " + data + " đã thoát.");
+                String hostName = data;
+                showInfoAlert("Phòng chờ đã đóng",
+                    "Host " + hostName + " đã rời phòng.\n\nPhòng chờ đã bị hủy.");
+                currentLobbyId = null;
                 backToMainMenu();
                 break;
-            case "BUFF_ACTIVATED":
-                showInfoAlert("Buff!", "Bạn đã nhặt được vật phẩm buff! Điểm của bạn được cộng thêm.");
+            case "LOBBY_PLAYER_LEFT":
+                String[] leftParts = data.split(":", 2);
+                String leftPlayer = leftParts[0];
+                String reason = leftParts.length > 1 ? leftParts[1] : "";
+
+                if (reason.equals("NOT_ENOUGH_PLAYERS")) {
+                    showInfoAlert("Thông báo", leftPlayer + " đã rời phòng.\n\nKhông đủ người chơi để bắt đầu game (cần 2 người).");
+                } else {
+                    showInfoAlert("Thông báo", leftPlayer + " đã rời phòng.");
+                }
                 break;
-            case "DEBUFF_ACTIVATED":
-                showInfoAlert("Debuff!", "Bạn đã bị đối thủ làm giảm điểm!");
-                break;
-            case "DEBUFF_SUCCESS":
-                showInfoAlert("Thành công!", "Bạn đã làm giảm điểm của đối thủ!");
+            case "LOBBY_UPDATE":
+                // Cập nhật danh sách người chơi trong lobby
+                String[] updateData = data.split(":", 3);
+                String updateLobbyId = updateData[0];
+                String updateHost = updateData[1];
+                String[] updatePlayers = updateData[2].split(",");
+
+                if (currentLobbyId != null && currentLobbyId.equals(updateLobbyId)) {
+                    // Tạo lại giao diện lobby với danh sách người chơi mới
+                    createLobbyUI(updateLobbyId, updateHost, updatePlayers);
+                    Scene updatedLobbyScene = new Scene(gameLobbyPane, SCENE_WIDTH, SCENE_HEIGHT);
+                    updatedLobbyScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+                    primaryStage.setScene(updatedLobbyScene);
+
+                    // Hiển thị thông báo khi chỉ còn 1 người (host)
+                    if (updatePlayers.length == 1) {
+                        Platform.runLater(() -> {
+                            showInfoAlert("Người chơi đã rời phòng",
+                                "Đối thủ đã rời khỏi phòng chờ.\n\n" +
+                                "Hiện tại chỉ có bạn trong phòng.\n" +
+                                "Cần thêm 1 người chơi nữa để bắt đầu game.");
+                        });
+                    }
+                }
                 break;
         }
     }
@@ -1053,9 +1212,8 @@ public class GameClient extends Application {
             // Thêm nút cho người chơi lựa chọn sau game kết thúc
             ButtonType playAgainButton = new ButtonType("Chơi tiếp");
             ButtonType mainMenuButton = new ButtonType("Menu chính");
-            ButtonType leaderboardButton = new ButtonType("Xem bảng xếp hạng");
 
-            alert.getButtonTypes().setAll(playAgainButton, leaderboardButton, mainMenuButton);
+            alert.getButtonTypes().setAll(playAgainButton, mainMenuButton);
             alert.setContentText("Bạn muốn làm gì tiếp theo?");
 
             Optional<ButtonType> result = alert.showAndWait();
@@ -1063,11 +1221,6 @@ public class GameClient extends Application {
             if (result.isPresent()) {
                 if (result.get() == playAgainButton) {
                     // Quay về menu chính để tìm đối thủ mới
-                    backToMainMenu();
-                    showErrorAlert("Thông báo", "Hãy chọn đối thủ để chơi tiếp!");
-                } else if (result.get() == leaderboardButton) {
-                    // Xem bảng xếp hạng trước rồi về menu chính
-                    sendMessage("GET_LEADERBOARD");
                     backToMainMenu();
                 } else {
                     // Về menu chính

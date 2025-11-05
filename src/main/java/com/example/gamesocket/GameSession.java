@@ -7,7 +7,7 @@ public class GameSession {
     private enum ItemType { RICE, CHAFF, SCORE_BUFF, SCORE_DEBUFF }
     private static final int TOTAL_GRAINS = 70;
     private static final int TARGET_RICE = 20;
-    private static final int GAME_DURATION = 15; // seconds
+    private static final int GAME_DURATION = 50; // seconds
 
     private String gameId;
     private String player1;
