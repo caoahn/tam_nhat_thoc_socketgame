@@ -140,31 +140,15 @@ public class GameSession {
                 }
                 break;
             case SCORE_BUFF:
-                int buffedScore = playerScores.get(player) + 3;
-                playerScores.put(player, buffedScore);
+                // Chỉ thông báo nhặt được, không cộng điểm ngay
                 if (client != null) {
-                    client.sendMessage("GRAIN_RESULT:" + grainIndex + ",SCORE_BUFF," + buffedScore);
-                    client.sendMessage("BUFF_ACTIVATED:SCORE_UP");
-                }
-                if (opponentClient != null) {
-                    opponentClient.sendMessage("OPPONENT_SCORE:" + player + "," + buffedScore);
-                }
-                if (buffedScore >= TARGET_RICE) {
-                    endGame(player);
-                    return;
+                    client.sendMessage("GRAIN_RESULT:" + grainIndex + ",SCORE_BUFF," + playerScores.get(player));
                 }
                 break;
             case SCORE_DEBUFF:
-                int opponentScore = playerScores.get(opponent) - 2;
-                if (opponentScore < 0) opponentScore = 0;
-                playerScores.put(opponent, opponentScore);
+                // Chỉ thông báo nhặt được, không trừ điểm đối thủ ngay
                 if (client != null) {
                     client.sendMessage("GRAIN_RESULT:" + grainIndex + ",SCORE_DEBUFF," + playerScores.get(player));
-                    client.sendMessage("DEBUFF_SUCCESS:SCORE_DOWN");
-                }
-                if (opponentClient != null) {
-                    opponentClient.sendMessage("OPPONENT_SCORE:" + opponent + "," + opponentScore);
-                    opponentClient.sendMessage("DEBUFF_ACTIVATED:SCORE_DOWN");
                 }
                 break;
             case CHAFF:
@@ -172,6 +156,53 @@ public class GameSession {
                     client.sendMessage("GRAIN_RESULT:" + grainIndex + ",CHAFF," + playerScores.get(player));
                 }
                 break;
+        }
+    }
+
+    /**
+     * Xử lý khi người chơi sử dụng buff hoặc debuff từ inventory
+     */
+    public synchronized void handleUseBuffDebuff(String player, boolean isBuff) {
+        if (gameEnded) return;
+
+        ClientHandler client = server.getOnlineClients().get(player);
+        String opponent = player.equals(player1) ? player2 : player1;
+        ClientHandler opponentClient = server.getOnlineClients().get(opponent);
+
+        if (isBuff) {
+            // Buff: Cộng 3 điểm cho người chơi
+            int newScore = playerScores.get(player) + 3;
+            playerScores.put(player, newScore);
+
+            // Gửi cho người chơi: chỉ BUFF_ACTIVATED (không gửi OPPONENT_SCORE)
+            if (client != null) {
+                client.sendMessage("BUFF_ACTIVATED:+" + newScore);
+            }
+            // Gửi cho đối thủ: cập nhật điểm của người chơi vừa dùng buff
+            if (opponentClient != null) {
+                opponentClient.sendMessage("OPPONENT_SCORE:" + player + "," + newScore);
+            }
+
+            // Kiểm tra điều kiện thắng
+            if (newScore >= TARGET_RICE) {
+                endGame(player);
+                return;
+            }
+        } else {
+            // Debuff: Trừ 2 điểm của đối thủ
+            int opponentScore = playerScores.get(opponent) - 2;
+            if (opponentScore < 0) opponentScore = 0;
+            playerScores.put(opponent, opponentScore);
+
+            // Gửi cho người chơi: thông báo thành công VÀ cập nhật điểm đối thủ
+            if (client != null) {
+                client.sendMessage("DEBUFF_SUCCESS:Đã giảm điểm đối thủ!");
+                client.sendMessage("OPPONENT_SCORE:" + opponent + "," + opponentScore);
+            }
+            // Gửi cho đối thủ: thông báo bị debuff (điểm tự cập nhật qua DEBUFF_ACTIVATED)
+            if (opponentClient != null) {
+                opponentClient.sendMessage("DEBUFF_ACTIVATED:-" + opponentScore);
+            }
         }
     }
 

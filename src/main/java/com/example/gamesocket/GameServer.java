@@ -306,6 +306,13 @@ public class GameServer {
         }
     }
 
+    public void handleUseBuffDebuff(String gameId, String player, boolean isBuff) {
+        GameSession session = activeSessions.get(gameId);
+        if (session != null) {
+            session.handleUseBuffDebuff(player, isBuff);
+        }
+    }
+
     /**
      * Xử lý khi một người chơi thoát game giữa chừng
      * @param gameId ID của game session

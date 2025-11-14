@@ -67,6 +67,12 @@ public class ClientHandler implements Runnable {
             case "GAME_ACTION":
                 handleGameAction(data);
                 break;
+            case "USE_BUFF":
+                handleUseBuffDebuff(username, true);
+                break;
+            case "USE_DEBUFF":
+                handleUseBuffDebuff(username, false);
+                break;
             case "GET_LEADERBOARD":
                 sendMessage(server.getLeaderboard());
                 break;
@@ -153,6 +159,12 @@ public class ClientHandler implements Runnable {
             server.handleLobbyLeave(currentLobbyId, username);
             setCurrentLobbyId(null);
             sendMessage("LEAVE_LOBBY_SUCCESS");
+        }
+    }
+
+    private void handleUseBuffDebuff(String player, boolean isBuff) {
+        if (currentGameId != null) {
+            server.handleUseBuffDebuff(currentGameId, player, isBuff);
         }
     }
 
