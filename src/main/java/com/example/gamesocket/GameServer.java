@@ -499,6 +499,66 @@ public class GameServer {
         return onlineClients;
     }
 
+    public String getMatchHistory(String username) {
+        try {
+            Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            String query = """
+                SELECT game_id, player1, player2, winner, player1_score, player2_score, 
+                       duration_seconds, played_at
+                FROM game_results 
+                WHERE player1 = ? OR player2 = ?
+                ORDER BY played_at DESC
+                LIMIT 50
+            """;
+
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, username);
+            stmt.setString(2, username);
+            ResultSet rs = stmt.executeQuery();
+
+            StringBuilder history = new StringBuilder("MATCH_HISTORY:");
+            while (rs.next()) {
+                String gameId = rs.getString("game_id");
+                String player1 = rs.getString("player1");
+                String player2 = rs.getString("player2");
+                String winner = rs.getString("winner");
+                int player1Score = rs.getInt("player1_score");
+                int player2Score = rs.getInt("player2_score");
+                int duration = rs.getInt("duration_seconds");
+                String playedAt = rs.getTimestamp("played_at").toString();
+
+                // Xác định đối thủ và điểm của người chơi
+                String opponent = player1.equals(username) ? player2 : player1;
+                int myScore = player1.equals(username) ? player1Score : player2Score;
+                int opponentScore = player1.equals(username) ? player2Score : player1Score;
+
+                // Xác định kết quả (WIN/LOSS/DRAW)
+                String result;
+                if (winner.equals("DRAW")) {
+                    result = "DRAW";
+                } else if (winner.equals(username)) {
+                    result = "WIN";
+                } else {
+                    result = "LOSS";
+                }
+
+                history.append(gameId).append(",")
+                        .append(opponent).append(",")
+                        .append(result).append(",")
+                        .append(myScore).append(",")
+                        .append(opponentScore).append(",")
+                        .append(duration).append(",")
+                        .append(playedAt).append(";");
+            }
+
+            conn.close();
+            return history.toString();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return "MATCH_HISTORY:";
+        }
+    }
+
     public void stop() {
         try {
             if (serverSocket != null && !serverSocket.isClosed()) {

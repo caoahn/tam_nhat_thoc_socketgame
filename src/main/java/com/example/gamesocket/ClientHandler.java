@@ -76,6 +76,9 @@ public class ClientHandler implements Runnable {
             case "GET_LEADERBOARD":
                 sendMessage(server.getLeaderboard());
                 break;
+            case "GET_MATCH_HISTORY":
+                sendMessage(server.getMatchHistory(username));
+                break;
             case "PRIVATE_MESSAGE":
                 String[] chatParts = data.split(":", 2);
                 if (chatParts.length == 2) {

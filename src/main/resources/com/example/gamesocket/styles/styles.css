@@ -1,6 +1,6 @@
 /* ================= BACKGROUND & MAIN STYLING ================= */
 .root {
-    -fx-background-color: linear-gradient(to bottom, #87CEEB, #E0F6FF);
+    -fx-background-color: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 50%, #FFF8DC 100%);
     -fx-font-family: "Segoe UI", "Arial", sans-serif;
 }
 
@@ -11,6 +11,45 @@
     -fx-border-width: 3;
     -fx-border-radius: 15;
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 10, 0, 0, 3);
+}
+
+/* ================= GAME TITLE HEADER ================= */
+.game-title-header {
+    -fx-background-color: linear-gradient(to right, #FFD700, #FFA500, #FFD700);
+    -fx-background-radius: 20;
+    -fx-padding: 20 30 20 30;
+    -fx-border-color: #B8860B;
+    -fx-border-width: 4;
+    -fx-border-radius: 20;
+    -fx-effect: dropshadow(three-pass-box, rgba(184, 134, 11, 0.6), 15, 0, 0, 5);
+}
+
+.game-title-main {
+    -fx-font-size: 48px;
+    -fx-font-weight: bold;
+    -fx-text-fill: linear-gradient(to bottom, #8B4513, #D2691E);
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 3, 0, 2, 2);
+}
+
+.game-subtitle {
+    -fx-font-size: 18px;
+    -fx-font-style: italic;
+    -fx-text-fill: #654321;
+    -fx-effect: dropshadow(one-pass-box, rgba(255,255,255,0.8), 1, 0, 0, 1);
+}
+
+/* ================= SECTION HEADERS ================= */
+.section-header {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2F4F4F;
+    -fx-background-color: linear-gradient(to right, #FFD700, #F0E68C);
+    -fx-background-radius: 10;
+    -fx-padding: 12 20 12 20;
+    -fx-border-color: #DAA520;
+    -fx-border-width: 2;
+    -fx-border-radius: 10;
+    -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 2);
 }
 
 /* ================= TITLE & LABELS ================= */
@@ -31,14 +70,26 @@
     -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 2);
 }
 
+/* ================= CARD STYLING ================= */
+.info-card {
+    -fx-background-color: linear-gradient(to bottom, #FFFAF0, #FFF8DC);
+    -fx-background-radius: 15;
+    -fx-padding: 20;
+    -fx-border-color: #DAA520;
+    -fx-border-width: 2;
+    -fx-border-radius: 15;
+    -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.15), 5, 0, 0, 3);
+}
+
 /* ================= BUTTONS ================= */
 .button {
     -fx-background-color: linear-gradient(to bottom, #DAA520, #B8860B);
     -fx-text-fill: white;
     -fx-font-weight: bold;
+    -fx-font-size: 14px;
     -fx-background-radius: 8;
     -fx-border-radius: 8;
-    -fx-padding: 12 20 12 20; /* Increased padding */
+    -fx-padding: 12 20 12 20;
     -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.3), 3, 0, 0, 2);
     -fx-cursor: hand;
 }
@@ -62,7 +113,7 @@
     -fx-border-width: 2;
     -fx-border-radius: 5;
     -fx-background-radius: 5;
-    -fx-font-size: 18px; /* Increased font size */
+    -fx-font-size: 18px;
     -fx-padding: 8;
 }
 
@@ -78,18 +129,21 @@
     -fx-border-width: 2;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
+    -fx-font-size: 14px;
 }
 
 .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: #2F4F4F;
     -fx-font-weight: bold;
-    -fx-padding: 8;
+    -fx-padding: 10;
+    -fx-font-size: 14px;
 }
 
 .list-cell:filled:hover {
     -fx-background-color: #F0E68C;
     -fx-text-fill: #8B4513;
+    -fx-cursor: hand;
 }
 
 .list-cell:filled:selected {
@@ -197,106 +251,40 @@
     -fx-border-width: 2;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
-    -fx-font-size: 14px; /* Increase base font size */
-}
-
-.error-alert {
-    -fx-background-color: linear-gradient(to bottom, #FFBABA, #FF7B7B);
-    -fx-border-color: #D8000C;
-    -fx-border-width: 3;
-}
-
-.error-alert .label {
-    -fx-text-fill: #D8000C;
-    -fx-font-weight: bold;
-}
-
-.error-alert .header-panel {
-    -fx-background-color: #D8000C;
-}
-
-.error-alert .header-panel .label {
-    -fx-text-fill: white;
-    -fx-font-size: 16px;
-}
-
-.info-alert {
-    -fx-background-color: linear-gradient(to bottom, #BDE5F8, #A2D5F2);
-    -fx-border-color: #007BFF;
-    -fx-border-width: 3;
-}
-
-.info-alert .label {
-    -fx-text-fill: #0056B3;
-    -fx-font-weight: bold;
-}
-
-.info-alert .header-panel {
-    -fx-background-color: #007BFF;
-}
-
-.info-alert .header-panel .label {
-    -fx-text-fill: white;
-    -fx-font-size: 16px;
-}
-
-
-/* ================= REGISTER FORM STYLING ================= */
-.register-input {
-    -fx-background-color: white;
-    -fx-border-color: #28a745;
-    -fx-border-width: 2;
-    -fx-border-radius: 5;
-    -fx-background-radius: 5;
     -fx-font-size: 14px;
-    -fx-padding: 10;
-    -fx-alignment: center;
-    -fx-pref-width: 300;
-    -fx-max-width: 300;
 }
 
-.register-input:focused {
-    -fx-border-color: #218838;
-    -fx-effect: dropshadow(one-pass-box, rgba(40, 167, 69, 0.5), 5, 0, 0, 0);
+.error-alert .dialog-pane {
+    -fx-border-color: #DC143C;
 }
 
-/* Đảm bảo các VBox chứa input căn giữa */
-.main-pane VBox {
-    -fx-alignment: center;
+.info-alert .dialog-pane {
+    -fx-border-color: #4169E1;
 }
 
-/* Căn giữa các label trong form đăng ký */
-.main-pane Label {
-    -fx-alignment: center;
-    -fx-text-alignment: center;
+/* ================= BUFF/DEBUFF STYLING ================= */
+.grain-buff {
+    -fx-fill: radial-gradient(center 30% 30%, radius 60%, #87CEEB, #4682B4);
+    -fx-stroke: #1E90FF;
+    -fx-stroke-width: 3;
+    -fx-effect: dropshadow(one-pass-box, rgba(30,144,255,0.8), 5, 0, 0, 0);
 }
 
-
-.pulse-animation {
-    -fx-animation: pulse 0.8s ease-in-out infinite;
+.grain-debuff {
+    -fx-fill: radial-gradient(center 30% 30%, radius 60%, #DC143C, #8B0000);
+    -fx-stroke: #8B0000;
+    -fx-stroke-width: 3;
+    -fx-effect: dropshadow(one-pass-box, rgba(220,20,60,0.8), 5, 0, 0, 0);
 }
 
 /* ================= LOBBY CHAT STYLING ================= */
 .lobby-chat-area {
-    -fx-control-inner-background: #FFFAF0;
-    -fx-background-color: #FFFAF0;
+    -fx-background-color: #FFFFF0;
     -fx-border-color: #DAA520;
     -fx-border-width: 2;
     -fx-border-radius: 8;
     -fx-background-radius: 8;
-    -fx-font-family: "Segoe UI", "Arial", sans-serif;
-    -fx-font-size: 13px;
-    -fx-text-fill: #2F4F4F;
-    -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 1);
-}
-
-.lobby-chat-area .content {
-    -fx-background-color: #FFFAF0;
-}
-
-.lobby-chat-area:focused {
-    -fx-border-color: #FFD700;
-    -fx-effect: dropshadow(one-pass-box, rgba(255,215,0,0.3), 5, 0, 0, 0);
+    -fx-font-family: "Consolas", "Courier New", monospace;
 }
 
 .lobby-chat-input {
@@ -305,86 +293,36 @@
     -fx-border-width: 2;
     -fx-border-radius: 5;
     -fx-background-radius: 5;
-    -fx-font-size: 13px;
-    -fx-padding: 8;
-    -fx-pref-height: 35px;
-}
-
-.lobby-chat-input:focused {
-    -fx-border-color: #FFD700;
-    -fx-background-color: #FFFEF0;
-    -fx-effect: dropshadow(one-pass-box, rgba(255,215,0,0.4), 5, 0, 0, 0);
+    -fx-font-size: 14px;
 }
 
 .lobby-chat-send-button {
-    -fx-background-color: linear-gradient(to bottom, #3498db, #2980b9);
+    -fx-background-color: linear-gradient(to bottom, #4CAF50, #45a049);
     -fx-text-fill: white;
     -fx-font-weight: bold;
-    -fx-background-radius: 5;
-    -fx-border-radius: 5;
-    -fx-padding: 8 15 8 15;
-    -fx-font-size: 12px;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);
 }
 
 .lobby-chat-send-button:hover {
-    -fx-background-color: linear-gradient(to bottom, #5DADE2, #3498db);
-    -fx-scale-x: 1.03;
-    -fx-scale-y: 1.03;
+    -fx-background-color: linear-gradient(to bottom, #45a049, #3d8b40);
 }
 
-.lobby-chat-send-button:pressed {
-    -fx-background-color: linear-gradient(to bottom, #2980b9, #1F618D);
-    -fx-scale-x: 0.98;
-    -fx-scale-y: 0.98;
-}
-
-/* ================= LOBBY PLAYER LIST STYLING ================= */
-.lobby-player-list {
-    -fx-background-color: #FFFAF0;
-    -fx-border-color: #27ae60;
+/* ================= REGISTER FORM STYLING ================= */
+.register-input {
+    -fx-background-color: white;
+    -fx-border-color: #DAA520;
     -fx-border-width: 2;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-effect: dropshadow(one-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 1);
-}
-
-.lobby-player-list .list-cell {
-    -fx-background-color: transparent;
-    -fx-text-fill: #2F4F4F;
-    -fx-font-weight: bold;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
     -fx-font-size: 14px;
     -fx-padding: 10;
 }
 
-.lobby-player-list .list-cell:filled:hover {
-    -fx-background-color: #E8F8F5;
+.register-input:focused {
+    -fx-border-color: #FFD700;
+    -fx-effect: dropshadow(one-pass-box, rgba(255,215,0,0.6), 5, 0, 0, 0);
 }
 
-/* ================= SCROLLBAR STYLING ================= */
-.scroll-bar {
-    -fx-background-color: #F5F5DC;
-}
-
-.scroll-bar .thumb {
-    -fx-background-color: linear-gradient(to bottom, #DAA520, #B8860B);
-    -fx-background-radius: 5;
-}
-
-.scroll-bar .thumb:hover {
-    -fx-background-color: linear-gradient(to bottom, #FFD700, #DAA520);
-}
-
-.scroll-bar .increment-button, .scroll-bar .decrement-button {
-    -fx-background-color: #F5F5DC;
-}
-
-.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
-    -fx-background-color: #8B4513;
-}
-
-/* ================= TABLE VIEW (LEADERBOARD) ================= */
+/* ================= TABLE VIEW STYLING ================= */
 .table-view {
     -fx-background-color: #FFFAF0;
     -fx-border-color: #DAA520;
@@ -394,16 +332,14 @@
 }
 
 .table-view .column-header {
-    -fx-background-color: linear-gradient(to bottom, #DAA520, #B8860B);
-    -fx-text-fill: white;
+    -fx-background-color: linear-gradient(to bottom, #FFD700, #DAA520);
+    -fx-text-fill: #2F4F4F;
     -fx-font-weight: bold;
     -fx-font-size: 14px;
-    -fx-padding: 8;
 }
 
 .table-row-cell {
-    -fx-background-color: white;
-    -fx-border-color: #F0E68C;
+    -fx-background-color: transparent;
 }
 
 .table-row-cell:odd {
@@ -411,36 +347,10 @@
 }
 
 .table-row-cell:selected {
-    -fx-background-color: #FFD700;
-    -fx-text-fill: #2F4F4F;
-}
-
-.table-row-cell:hover {
     -fx-background-color: #F0E68C;
 }
 
-/* ================= BUFF/DEBUFF ITEMS ================= */
-.grain-buff {
-    -fx-fill: radial-gradient(center 30% 30%, radius 60%, #FFD700, #FFA500);
-    -fx-stroke: #FF8C00;
-    -fx-stroke-width: 2.5;
-    -fx-effect: dropshadow(one-pass-box, rgba(255,215,0,0.8), 6, 0, 0, 0);
-}
-
-.grain-debuff {
-    -fx-fill: radial-gradient(center 30% 30%, radius 60%, #DC143C, #8B0000);
-    -fx-stroke: #4B0000;
-    -fx-stroke-width: 2.5;
-    -fx-effect: dropshadow(one-pass-box, rgba(220,20,60,0.8), 6, 0, 0, 0);
-}
-
-/* ================= ERROR LABEL ================= */
-.error-label {
-    -fx-background-color: #FF6B6B; /* A noticeable red background */
-    -fx-text-fill: white; /* White text for contrast */
-    -fx-font-weight: bold;
-    -fx-padding: 10px;
-    -fx-background-radius: 5;
-    -fx-border-radius: 5;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 5, 0, 0, 2);
+.table-cell {
+    -fx-text-fill: #2F4F4F;
+    -fx-font-size: 13px;
 }

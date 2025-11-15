@@ -27,6 +27,7 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
@@ -443,24 +444,60 @@ public class GameClient extends Application {
 
     private void createMainGameUI() {
         BorderPane borderPane = new BorderPane();
-        borderPane.setPadding(new Insets(10));
+        borderPane.setPadding(new Insets(15));
 
-        // TOP: Lời chào mừng
-        Label welcomeLabel = new Label("Chào mừng: " + currentUsername);
+        // ============ TOP: TIÊU ĐỀ GAME VÀ WELCOME ============
+        VBox topSection = new VBox(15);
+        topSection.setAlignment(Pos.CENTER);
+
+        // Tiêu đề game với icon
+        VBox gameTitleBox = new VBox(8);
+        gameTitleBox.setAlignment(Pos.CENTER);
+        gameTitleBox.getStyleClass().add("game-title-header");
+
+        Label gameTitleLabel = new Label("🌾 GAME TẤM NHẶT THÓC 🌾");
+        gameTitleLabel.getStyleClass().add("game-title-main");
+        gameTitleLabel.setStyle("-fx-font-size: 42px; -fx-font-weight: bold; -fx-text-fill: #8B4513;");
+
+        Label gameSubtitleLabel = new Label("✨ Trò chơi dân gian Việt Nam ✨");
+        gameSubtitleLabel.getStyleClass().add("game-subtitle");
+        gameSubtitleLabel.setStyle("-fx-font-size: 16px; -fx-font-style: italic; -fx-text-fill: #654321;");
+
+        gameTitleBox.getChildren().addAll(gameTitleLabel, gameSubtitleLabel);
+
+        // Welcome user
+        Label welcomeLabel = new Label("👤 Xin chào: " + currentUsername + " 👤");
         welcomeLabel.getStyleClass().add("welcome-label");
-        BorderPane.setAlignment(welcomeLabel, Pos.CENTER);
-        borderPane.setTop(welcomeLabel);
+        welcomeLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white; " +
+                "-fx-background-color: linear-gradient(to right, #FF6347, #FF4500); " +
+                "-fx-background-radius: 10; -fx-padding: 10 20 10 20;");
 
-        // CENTER: Danh sách người chơi
-        VBox userListBox = new VBox(5);
-        Label onlineLabel = new Label("Người chơi trực tuyến (click chuột phải để mời):");
+        topSection.getChildren().addAll(gameTitleBox, welcomeLabel);
+        borderPane.setTop(topSection);
+        BorderPane.setMargin(topSection, new Insets(0, 0, 15, 0));
+
+        // ============ CENTER: DANH SÁCH NGƯỜI CHƠI ============
+        VBox centerSection = new VBox(15);
+        centerSection.setAlignment(Pos.CENTER);
+        centerSection.getStyleClass().add("info-card");
+
+        // Header với icon
+        Label onlineLabel = new Label("👥 NGƯỜI CHƠI TRỰC TUYẾN");
+        onlineLabel.getStyleClass().add("section-header");
+        onlineLabel.setStyle("-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #2F4F4F;");
+
+        Label instructionLabel = new Label("💡 Chuột phải vào tên người chơi để mời hoặc nhắn tin");
+        instructionLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #666; -fx-font-style: italic;");
+
         userListView = new ListView<>();
+        userListView.setPrefHeight(350);
+        userListView.setStyle("-fx-font-size: 15px;");
 
         // =================== BỔ SUNG PHẦN CODE BỊ THIẾU ===================
         // BƯỚC 1: Tạo ContextMenu và MenuItem
         ContextMenu userContextMenu = new ContextMenu();
-        MenuItem inviteMenuItem = new MenuItem("Mời chơi");
-        MenuItem chatMenuItem = new MenuItem("Nhắn tin");
+        MenuItem inviteMenuItem = new MenuItem("🎮 Mời chơi");
+        MenuItem chatMenuItem = new MenuItem("💬 Nhắn tin");
 
         userContextMenu.getItems().addAll(inviteMenuItem, chatMenuItem);
 
@@ -513,40 +550,70 @@ public class GameClient extends Application {
         });
         // =================== KẾT THÚC PHẦN BỔ SUNG ===================
 
-        userListBox.getChildren().addAll(onlineLabel, userListView);
-        borderPane.setCenter(userListBox);
-        BorderPane.setMargin(userListBox, new Insets(10, 5, 0, 0));
+        VBox.setVgrow(userListView, Priority.ALWAYS);
 
+        centerSection.getChildren().addAll(onlineLabel, instructionLabel, userListView);
+        borderPane.setCenter(centerSection);
+        BorderPane.setMargin(centerSection, new Insets(0, 10, 15, 10));
 
-        // RIGHT: Khu vực chat (tạm thời ẩn đi)
-        // VBox chatPane = createChatPane();
-        // borderPane.setRight(chatPane);
-        // BorderPane.setMargin(chatPane, new Insets(10, 0, 0, 5));
+        // ============ BOTTOM: CÁC NÚT CHỨC NĂNG ============
+        HBox buttonBox = new HBox(15);
+        buttonBox.setAlignment(Pos.CENTER);
+        buttonBox.setPadding(new Insets(10));
 
-        // BOTTOM: Các nút chức năng
-        Button leaderboardButton = new Button("Bảng xếp hạng");
+        Button leaderboardButton = new Button("🏆 Bảng xếp hạng");
+        leaderboardButton.setStyle("-fx-font-size: 15px; -fx-padding: 12 25 12 25; " +
+                "-fx-background-color: linear-gradient(to bottom, #4CAF50, #388E3C); " +
+                "-fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
         leaderboardButton.setOnAction(e -> sendMessage("GET_LEADERBOARD"));
-        Button logoutButton = new Button("Đăng xuất");
-        logoutButton.setOnAction(e -> {
-            // Reset thông tin người dùng
-            currentUsername = null;
-            currentGameId = null;
-            opponent = null;
-            currentScore = 0;
 
+        Button matchHistoryButton = new Button("📜 Lịch sử đấu");
+        matchHistoryButton.setStyle("-fx-font-size: 15px; -fx-padding: 12 25 12 25; " +
+                "-fx-background-color: linear-gradient(to bottom, #2196F3, #1976D2); " +
+                "-fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
+        matchHistoryButton.setOnAction(e -> sendMessage("GET_MATCH_HISTORY"));
+
+        Button logoutButton = new Button("🚪 Đăng xuất");
+        logoutButton.setStyle("-fx-font-size: 15px; -fx-padding: 12 25 12 25; " +
+                "-fx-background-color: linear-gradient(to bottom, #f44336, #d32f2f); " +
+                "-fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
+        logoutButton.setOnAction(e -> {
             // Đóng tất cả chat windows
             for (ChatWindow chatWindow : openChatWindows.values()) {
                 chatWindow.close();
             }
             openChatWindows.clear();
 
-            // Quay về giao diện đăng nhập thay vì thoát ứng dụng
+            // Đóng kết nối socket
+            try {
+                if (socket != null && !socket.isClosed()) {
+                    socket.close();
+                }
+                if (reader != null) {
+                    reader.close();
+                }
+                if (writer != null) {
+                    writer.close();
+                }
+            } catch (IOException ex) {
+                System.err.println("Lỗi khi đóng kết nối: " + ex.getMessage());
+            }
+
+            // Reset thông tin người dùng
+            currentUsername = null;
+            currentGameId = null;
+            opponent = null;
+            currentScore = 0;
+            socket = null;
+            reader = null;
+            writer = null;
+
+            // Quay về giao diện đăng nhập
             showLoginForm();
         });
-        HBox buttonBox = new HBox(10, leaderboardButton, logoutButton);
-        buttonBox.setAlignment(Pos.CENTER);
+
+        buttonBox.getChildren().addAll(leaderboardButton, matchHistoryButton, logoutButton);
         borderPane.setBottom(buttonBox);
-        BorderPane.setMargin(buttonBox, new Insets(10, 0, 0, 0));
 
         // Gán mainGamePane là borderPane
         mainGamePane = new VBox(borderPane);
@@ -918,7 +985,8 @@ public class GameClient extends Application {
                 Platform.runLater(() -> processServerMessage(msg));
             }
         } catch (IOException e) {
-            Platform.runLater(() -> showErrorAlert("Lỗi", "Mất kết nối với server!"));
+            System.out.println("Lỗi kết nối đến server: " + e.getMessage());
+//            Platform.runLater(() -> showErrorAlert("Lỗi", "Mất kết nối với server!"));
         }
     }
 
@@ -1051,6 +1119,9 @@ public class GameClient extends Application {
             case "LEADERBOARD":
                 showLeaderboard(data);
                 break;
+            case "MATCH_HISTORY":
+                showMatchHistory(data);
+                break;
             case "LOBBY_READY":
                 String[] lobbyData = data.split(":", 3);
                 String lobbyId = lobbyData[0];
@@ -1161,34 +1232,31 @@ public class GameClient extends Application {
         String[] parts = data.split(",");
         currentGameId = parts[0];
         opponent = parts[1];
-        timeRemaining = Integer.parseInt(parts[2]);
-        currentScore = 0;
+        int gameDuration = Integer.parseInt(parts[2]);
 
         createGamePlayUI();
         Scene gameScene = new Scene(gamePlayPane, SCENE_WIDTH, SCENE_HEIGHT);
-
-        // Áp dụng CSS cho game scene
         gameScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
-
         primaryStage.setScene(gameScene);
 
-        startGameTimer();
+        startGameTimer(gameDuration);
     }
 
-    private void startGameTimer() {
+    private void startGameTimer(int duration) {
         if (gameTimer != null) {
             gameTimer.cancel();
         }
 
+        final int[] timeLeft = {duration};
         gameTimer = new Timer();
         gameTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 Platform.runLater(() -> {
-                    timeRemaining--;
-                    timerLabel.setText("⏰ Thời gian: " + timeRemaining + "s");
+                    timeLeft[0]--;
+                    timerLabel.setText("⏰ Thời gian: " + timeLeft[0] + "s");
 
-                    if (timeRemaining <= 0) {
+                    if (timeLeft[0] <= 0) {
                         gameTimer.cancel();
                     }
                 });
@@ -1202,10 +1270,7 @@ public class GameClient extends Application {
         String grainType = parts[1];
         currentScore = Integer.parseInt(parts[2]);
 
-        // Update grain appearance with CSS classes
         Circle grain = (Circle) grainGrid.getChildren().get(grainIndex);
-
-        // Remove old style classes
         grain.getStyleClass().removeAll("grain-unclicked", "grain-rice", "grain-chaff", "grain-buff", "grain-debuff");
 
         switch (grainType) {
@@ -1214,14 +1279,12 @@ public class GameClient extends Application {
                 break;
             case "SCORE_BUFF":
                 grain.getStyleClass().add("grain-buff");
-                // Thêm buff vào inventory và hiển thị toast
                 buffCount++;
                 updateInventoryUI();
                 showToast("🎁 Nhặt được Buff! +3 điểm khi dùng", "buff");
                 break;
             case "SCORE_DEBUFF":
                 grain.getStyleClass().add("grain-debuff");
-                // Thêm debuff vào inventory và hiển thị toast
                 debuffCount++;
                 updateInventoryUI();
                 showToast("💀 Nhặt được Debuff! Dùng để -2 điểm đối thủ", "error");
@@ -1236,16 +1299,13 @@ public class GameClient extends Application {
 
     private void handleOpponentScore(String data) {
         String[] parts = data.split(",");
-        String playerName = parts[0]; // Tên người chơi có điểm này
+        String playerName = parts[0];
         int score = Integer.parseInt(parts[1]);
 
-        // Kiểm tra xem đây là điểm của mình hay của đối thủ
         if (playerName.equals(currentUsername)) {
-            // Đây là điểm của MÌNH - cập nhật điểm của bạn
             currentScore = score;
             scoreLabel.setText("🌾 Điểm của bạn: " + currentScore);
         } else {
-            // Đây là điểm của ĐỐI THỦ - cập nhật điểm đối thủ
             opponentScoreLabel.setText("⚔️ Điểm đối thủ: " + score);
         }
     }
@@ -1262,25 +1322,19 @@ public class GameClient extends Application {
         boolean isGameCompleted = true;
 
         if (winner.equals("QUIT_LOSS")) {
-            // Người chơi này đã thoát game và bị thua
             resultMessage = "Bạn đã thoát game giữa chừng!\nKết quả: Thua cuộc\nĐiểm của bạn: " + currentScore;
             isGameCompleted = false;
         } else if (winner.equals("QUIT_WIN")) {
-            // Đối thủ đã thoát game, người chơi này thắng
             resultMessage = "Đối thủ đã thoát game!\nChúc mừng! Bạn thắng cuộc!\nĐiểm của bạn: " + currentScore;
-            isGameCompleted = true;
         } else if (winner.equals(currentUsername)) {
             resultMessage = "Chúc mừng! Bạn đã thắng!\nĐiểm của bạn: " + currentScore;
-            isGameCompleted = true;
         } else if (winner.equals("DRAW")) {
             resultMessage = "Hòa!\nĐiểm của bạn: " + currentScore;
-            isGameCompleted = true;
         } else if (winner.equals("QUIT")) {
             resultMessage = "Game kết thúc do bạn thoát!";
             isGameCompleted = false;
         } else {
             resultMessage = "Bạn đã thua!\nĐiểm của bạn: " + currentScore;
-            isGameCompleted = true;
         }
         showGameEndDialog("Kết thúc game", resultMessage, isGameCompleted);
     }
@@ -1309,6 +1363,164 @@ public class GameClient extends Application {
         public int getGamesPlayed() { return gamesPlayed; }
         public int getGamesWon() { return gamesWon; }
         public String getWinRate() { return winRate; }
+    }
+
+    // Lớp helper để chứa dữ liệu lịch sử đấu
+    public static class MatchHistoryEntry {
+        private final String gameId;
+        private final String opponent;
+        private final String result;
+        private final int myScore;
+        private final int opponentScore;
+        private final String duration;
+        private final String playedAt;
+
+        public MatchHistoryEntry(String gameId, String opponent, String result, int myScore, int opponentScore, String duration, String playedAt) {
+            this.gameId = gameId;
+            this.opponent = opponent;
+            this.result = result;
+            this.myScore = myScore;
+            this.opponentScore = opponentScore;
+            this.duration = duration;
+            this.playedAt = playedAt;
+        }
+
+        public String getGameId() { return gameId; }
+        public String getOpponent() { return opponent; }
+        public String getResult() { return result; }
+        public int getMyScore() { return myScore; }
+        public int getOpponentScore() { return opponentScore; }
+        public String getDuration() { return duration; }
+        public String getPlayedAt() { return playedAt; }
+    }
+
+    private void showMatchHistory(String data) {
+        VBox historyPane = new VBox(15);
+        historyPane.setPadding(new Insets(20));
+        historyPane.setAlignment(Pos.CENTER);
+        historyPane.getStyleClass().add("main-pane");
+
+        Label title = new Label("📜 LỊCH SỬ ĐẤU 📜");
+        title.getStyleClass().add("title-label");
+        title.setStyle("-fx-font-size: 32px; -fx-font-weight: bold;");
+
+        Label subtitle = new Label("Lịch sử 50 trận đấu gần nhất của " + currentUsername);
+        subtitle.setStyle("-fx-font-size: 16px; -fx-text-fill: #666; -fx-font-style: italic;");
+
+        TableView<MatchHistoryEntry> tableView = new TableView<>();
+        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        tableView.setPrefHeight(450);
+
+        TableColumn<MatchHistoryEntry, String> opponentCol = new TableColumn<>("Đối thủ");
+        opponentCol.setCellValueFactory(new PropertyValueFactory<>("opponent"));
+        opponentCol.setPrefWidth(150);
+
+        TableColumn<MatchHistoryEntry, String> resultCol = new TableColumn<>("Kết quả");
+        resultCol.setCellValueFactory(new PropertyValueFactory<>("result"));
+        resultCol.setPrefWidth(100);
+        resultCol.setStyle("-fx-alignment: CENTER;");
+        // Custom cell để thêm màu sắc cho kết quả
+        resultCol.setCellFactory(column -> new TableCell<MatchHistoryEntry, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    if ("WIN".equals(item)) {
+                        setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                        setText("✅ THẮNG");
+                    } else if ("LOSS".equals(item)) {
+                        setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold;");
+                        setText("❌ THUA");
+                    } else {
+                        setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;");
+                        setText("🤝 HÒA");
+                    }
+                }
+            }
+        });
+
+        TableColumn<MatchHistoryEntry, Integer> myScoreCol = new TableColumn<>("Điểm của bạn");
+        myScoreCol.setCellValueFactory(new PropertyValueFactory<>("myScore"));
+        myScoreCol.setStyle("-fx-alignment: CENTER;");
+        myScoreCol.setPrefWidth(120);
+
+        TableColumn<MatchHistoryEntry, Integer> oppScoreCol = new TableColumn<>("Điểm đối thủ");
+        oppScoreCol.setCellValueFactory(new PropertyValueFactory<>("opponentScore"));
+        oppScoreCol.setStyle("-fx-alignment: CENTER;");
+        oppScoreCol.setPrefWidth(120);
+
+        TableColumn<MatchHistoryEntry, String> durationCol = new TableColumn<>("Thời gian (s)");
+        durationCol.setCellValueFactory(new PropertyValueFactory<>("duration"));
+        durationCol.setStyle("-fx-alignment: CENTER;");
+        durationCol.setPrefWidth(100);
+
+        TableColumn<MatchHistoryEntry, String> dateCol = new TableColumn<>("Ngày giờ");
+        dateCol.setCellValueFactory(new PropertyValueFactory<>("playedAt"));
+        dateCol.setPrefWidth(180);
+
+        tableView.getColumns().addAll(opponentCol, resultCol, myScoreCol, oppScoreCol, durationCol, dateCol);
+
+        if (!data.isEmpty()) {
+            String[] matches = data.split(";");
+            for (String matchInfo : matches) {
+                if (!matchInfo.trim().isEmpty()) {
+                    String[] m = matchInfo.split(",");
+                    if (m.length >= 7) {
+                        tableView.getItems().add(new MatchHistoryEntry(
+                            m[0], // gameId
+                            m[1], // opponent
+                            m[2], // result
+                            Integer.parseInt(m[3]), // myScore
+                            Integer.parseInt(m[4]), // opponentScore
+                            m[5], // duration
+                            m[6]  // playedAt
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Thống kê tổng quan
+        int totalMatches = tableView.getItems().size();
+        int wins = (int) tableView.getItems().stream().filter(e -> "WIN".equals(e.getResult())).count();
+        int losses = (int) tableView.getItems().stream().filter(e -> "LOSS".equals(e.getResult())).count();
+        int draws = (int) tableView.getItems().stream().filter(e -> "DRAW".equals(e.getResult())).count();
+
+        HBox statsBox = new HBox(30);
+        statsBox.setAlignment(Pos.CENTER);
+        statsBox.setStyle("-fx-background-color: linear-gradient(to right, #FFF8DC, #F0E68C); " +
+                "-fx-background-radius: 10; -fx-padding: 15; -fx-border-color: #DAA520; " +
+                "-fx-border-width: 2; -fx-border-radius: 10;");
+
+        Label totalLabel = new Label("📊 Tổng: " + totalMatches + " trận");
+        totalLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+
+        Label winLabel = new Label("✅ Thắng: " + wins);
+        winLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #27ae60;");
+
+        Label lossLabel = new Label("❌ Thua: " + losses);
+        lossLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;");
+
+        Label drawLabel = new Label("🤝 Hòa: " + draws);
+        drawLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #f39c12;");
+
+        statsBox.getChildren().addAll(totalLabel, winLabel, lossLabel, drawLabel);
+
+        Button backButton = new Button("🔙 Quay lại Menu Chính");
+        backButton.setStyle("-fx-font-size: 15px; -fx-padding: 12 25 12 25; " +
+                "-fx-background-color: linear-gradient(to bottom, #95a5a6, #7f8c8d); " +
+                "-fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;");
+        backButton.setOnAction(e -> backToMainMenu());
+
+        historyPane.getChildren().addAll(title, subtitle, statsBox, tableView, backButton);
+
+        Scene scene = new Scene(historyPane, SCENE_WIDTH, SCENE_HEIGHT);
+        scene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
+        primaryStage.setScene(scene);
     }
 
     private void showLeaderboard(String data) {
