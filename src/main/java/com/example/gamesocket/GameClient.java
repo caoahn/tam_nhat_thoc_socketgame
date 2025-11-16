@@ -943,8 +943,8 @@ public class GameClient extends Application {
         itemInventoryBox.setAlignment(Pos.CENTER);
         itemInventoryBox.setPadding(new Insets(8));
         itemInventoryBox.setStyle("-fx-background-color: rgba(255, 255, 255, 0.8); -fx-border-color: #8e44ad; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
-        itemInventoryBox.setPrefWidth(160); // Giảm từ 200 xuống 160
-        itemInventoryBox.setVisible(false);
+        itemInventoryBox.setPrefWidth(160); 
+        itemInventoryBox.setVisible(true); 
 
         Label inventoryTitle = new Label("🎒 VẬT PHẨM");
         inventoryTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #8e44ad;");
@@ -1027,6 +1027,8 @@ public class GameClient extends Application {
         gameLayout.setRight(itemInventoryBox);
         BorderPane.setMargin(itemInventoryBox, new Insets(0, 5, 0, 5)); // Giảm margin
 
+        updateInventoryUI();
+
         gamePlayPane = new VBox(gameLayout);
         gamePlayPane.getStyleClass().add("root");
     }
@@ -1050,7 +1052,7 @@ public class GameClient extends Application {
 
         // Hiển thị inventory box khi có ít nhất 1 item
         if (itemInventoryBox != null) {
-            itemInventoryBox.setVisible(buffCount > 0 || debuffCount > 0);
+            itemInventoryBox.setVisible(true);
         }
     }
 
