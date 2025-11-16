@@ -228,12 +228,12 @@
     -fx-stroke-width: 2;
 }
 
-/* Hạt gạo (thóc đã bóc vỏ) - màu trắng ngà */
+/* Hạt gạo (thóc đã bóc vỏ) - màu vàng nhạt */
 .grain-rice {
-    -fx-fill: radial-gradient(center 30% 30%, radius 60%, #FFFAFA, #F5F5DC);
-    -fx-stroke: #D3D3D3;
+    -fx-fill: radial-gradient(center 30% 30%, radius 60%, #FFF9C4, #FFD54F);
+    -fx-stroke: #FFA726;
     -fx-stroke-width: 2;
-    -fx-effect: dropshadow(one-pass-box, rgba(0,200,0,0.6), 4, 0, 0, 0);
+    -fx-effect: dropshadow(one-pass-box, rgba(255,200,0,0.6), 4, 0, 0, 0);
 }
 
 /* Hạt trấu/thóc lép - màu nâu đậm */

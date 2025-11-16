@@ -782,70 +782,104 @@ public class GameClient extends Application {
         chatWindow.show();
     }
 
-    private void createGamePlayUI() {
+    private void createGamePlayUI(String ricePositions) {
         // Reset buff/debuff count
         buffCount = 0;
         debuffCount = 0;
 
         BorderPane gameLayout = new BorderPane();
-        gameLayout.setPadding(new Insets(15));
+        gameLayout.setPadding(new Insets(10)); // Giảm padding từ 15 xuống 10
         gameLayout.getStyleClass().add("root");
 
         // CENTER: Game area
-        VBox centerBox = new VBox(15);
+        VBox centerBox = new VBox(10); // Giảm spacing từ 15 xuống 10
         centerBox.setAlignment(Pos.CENTER);
 
-        // Game info với styling đẹp hơn
+        // Game info với styling đẹp hơn - COMPACT HƠN
         Label gameInfoLabel = new Label("🌾 Đang chơi với: " + opponent + " 🌾");
         gameInfoLabel.getStyleClass().add("game-info-label");
+        gameInfoLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;"); // Giảm font size
 
-        // Score and timer với styling riêng biệt
-        HBox infoBox = new HBox(30);
+        // Score and timer với styling riêng biệt - COMPACT HƠN
+        HBox infoBox = new HBox(20); // Giảm spacing từ 30 xuống 20
         infoBox.setAlignment(Pos.CENTER);
 
-        scoreLabel = new Label("🌾 Điểm của bạn: 0");
+        scoreLabel = new Label("🌾 Điểm: 0");
         scoreLabel.getStyleClass().add("score-label");
+        scoreLabel.setStyle("-fx-font-size: 14px;"); // Giảm font size
 
-        opponentScoreLabel = new Label("⚔️ Điểm đối thủ: 0");
+        opponentScoreLabel = new Label("⚔ Đối thủ: 0");
         opponentScoreLabel.getStyleClass().add("opponent-score-label");
+        opponentScoreLabel.setStyle("-fx-font-size: 14px;"); // Giảm font size
 
-        timerLabel = new Label("⏰ Thời gian: 15s");
+        timerLabel = new Label("⏰ 15s");
         timerLabel.getStyleClass().add("timer-label");
+        timerLabel.setStyle("-fx-font-size: 14px;"); // Giảm font size
 
         infoBox.getChildren().addAll(scoreLabel, opponentScoreLabel, timerLabel);
 
-        // Hướng dẫn cho người chơi
-        Label instructionLabel = new Label("💡 Click vào hạt thóc để ghi điểm. Nhặt được buff/debuff thì click vào icon bên cạnh để kích hoạt!");
-        instructionLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #8B4513; -fx-font-style: italic; -fx-text-alignment: center;");
+        // Hướng dẫn - NGẮN GỌN HƠN
+        Label instructionLabel = new Label("💡 Nhặt GẠO (vàng) +1 điểm • Tránh TRẤU (nâu) -1 điểm");
+        instructionLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #8B4513; -fx-font-style: italic;");
         instructionLabel.setWrapText(true);
+        instructionLabel.setMaxWidth(800);
 
-        // Game grid với styling đẹp hơn
+        // Game grid - GIẢM SIZE VÀ KHOẢNG CÁCH
         grainGrid = new GridPane();
         grainGrid.setAlignment(Pos.CENTER);
-        grainGrid.setHgap(8);
-        grainGrid.setVgap(8);
+        grainGrid.setHgap(5); // Giảm từ 8 xuống 5
+        grainGrid.setVgap(5); // Giảm từ 8 xuống 5
         grainGrid.getStyleClass().add("game-grid");
+        grainGrid.setPadding(new Insets(5)); // Thêm padding nhỏ
 
-        // Create 70 grain circles with styling CSS
-        for (int i = 0; i < 70; i++) {
-            Circle grain = new Circle(22);
-            grain.getStyleClass().addAll("grain-circle", "grain-unclicked");
+        // Parse vị trí các hạt gạo
+        java.util.Set<Integer> riceIndexes = new java.util.HashSet<>();
+        if (ricePositions != null && !ricePositions.isEmpty()) {
+            String[] positions = ricePositions.split(":");
+            for (String pos : positions) {
+                try {
+                    riceIndexes.add(Integer.parseInt(pos.trim()));
+                } catch (NumberFormatException e) {
+                    // Bỏ qua nếu parse lỗi
+                }
+            }
+        }
+
+        // Create 100 grain circles - GIẢM SIZE TỪ 22 XUỐNG 18
+        for (int i = 0; i < 100; i++) {
+            Circle grain = new Circle(18); // GIẢM từ 22 xuống 18
+            grain.getStyleClass().add("grain-circle");
+
+            // Thiết lập màu ngay từ đầu
+            if (riceIndexes.contains(i)) {
+                grain.getStyleClass().add("grain-rice"); // Màu vàng - gạo
+            } else {
+                grain.getStyleClass().add("grain-chaff"); // Màu nâu - trấu
+            }
 
             final int grainIndex = i;
+            final boolean isRice = riceIndexes.contains(i);
+
             grain.setOnMouseClicked(e -> {
-                if (currentGameId != null && !grain.isDisabled()) {
+                if (currentGameId != null) {
                     sendMessage("GAME_ACTION:" + grainIndex);
-                    grain.setDisable(true);
-                    grain.setOpacity(0.7);
+
+                    // Nếu là gạo thì disable (biến mất)
+                    // Nếu là trấu thì KHÔNG disable (vẫn click được)
+                    if (isRice) {
+                        grain.setDisable(true);
+                        grain.setOpacity(0.3); // Làm mờ khi đã click
+                    }
                 }
             });
 
             grainGrid.add(grain, i % 10, i / 10);
         }
 
-        // Quit button với styling
+        // Quit button - COMPACT HƠN
         Button quitButton = new Button("🚪 Thoát game");
-        quitButton.setStyle("-fx-background-color: linear-gradient(to bottom, #DC143C, #B22222); -fx-text-fill: white; -fx-font-weight: bold;");
+        quitButton.setStyle("-fx-background-color: linear-gradient(to bottom, #DC143C, #B22222); " +
+                "-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12px; -fx-padding: 8 15 8 15;");
         quitButton.setOnAction(e -> {
             Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
             confirmAlert.setTitle("Xác nhận thoát");
@@ -861,38 +895,38 @@ public class GameClient extends Application {
         centerBox.getChildren().addAll(gameInfoLabel, infoBox, instructionLabel, grainGrid, quitButton);
         gameLayout.setCenter(centerBox);
 
-        // RIGHT: Item Inventory với hình ảnh
-        itemInventoryBox = new VBox(15);
+        // RIGHT: Item Inventory - COMPACT HƠN
+        itemInventoryBox = new VBox(12); // Giảm spacing
         itemInventoryBox.setAlignment(Pos.CENTER);
-        itemInventoryBox.setPadding(new Insets(10));
-        itemInventoryBox.setStyle("-fx-background-color: rgba(255, 255, 255, 0.8); -fx-border-color: #8e44ad; -fx-border-width: 3; -fx-border-radius: 10; -fx-background-radius: 10;");
-        itemInventoryBox.setPrefWidth(200);
-        itemInventoryBox.setVisible(false); // Ban đầu ẩn đi
+        itemInventoryBox.setPadding(new Insets(8));
+        itemInventoryBox.setStyle("-fx-background-color: rgba(255, 255, 255, 0.8); -fx-border-color: #8e44ad; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
+        itemInventoryBox.setPrefWidth(160); // Giảm từ 200 xuống 160
+        itemInventoryBox.setVisible(false);
 
         Label inventoryTitle = new Label("🎒 VẬT PHẨM");
-        inventoryTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #8e44ad;");
+        inventoryTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #8e44ad;");
 
-        // Buff item box
-        buffItemBox = new VBox(10);
+        // Buff item box - COMPACT HƠN
+        buffItemBox = new VBox(8);
         buffItemBox.setAlignment(Pos.CENTER);
-        buffItemBox.setPadding(new Insets(10));
+        buffItemBox.setPadding(new Insets(8));
         buffItemBox.setStyle("-fx-background-color: #d5f4e6; -fx-border-color: #27ae60; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
 
         try {
             javafx.scene.image.ImageView buffIcon = new javafx.scene.image.ImageView(
                 new javafx.scene.image.Image(getClass().getResourceAsStream("/com/example/gamesocket/image/buff.png"))
             );
-            buffIcon.setFitWidth(60);
-            buffIcon.setFitHeight(60);
+            buffIcon.setFitWidth(50); // Giảm từ 60 xuống 50
+            buffIcon.setFitHeight(50);
             buffIcon.setPreserveRatio(true);
 
             buffCountLabel = new Label("x 0");
-            buffCountLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #27ae60;");
+            buffCountLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #27ae60;");
 
-            Button useBuffButton = new Button("SỬ DỤNG BUFF");
-            useBuffButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
-            useBuffButton.setOnMouseEntered(e -> useBuffButton.setStyle("-fx-background-color: #229954; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"));
-            useBuffButton.setOnMouseExited(e -> useBuffButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"));
+            Button useBuffButton = new Button("SỬ DỤNG");
+            useBuffButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10 5 10;");
+            useBuffButton.setOnMouseEntered(e -> useBuffButton.setStyle("-fx-background-color: #229954; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10 5 10;"));
+            useBuffButton.setOnMouseExited(e -> useBuffButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10 5 10;"));
             useBuffButton.setOnAction(e -> {
                 if (buffCount > 0) {
                     sendMessage("USE_BUFF");
@@ -901,35 +935,35 @@ public class GameClient extends Application {
                 }
             });
 
-            Label buffDesc = new Label("+3 điểm cho bạn");
-            buffDesc.setStyle("-fx-font-size: 11px; -fx-text-fill: #555; -fx-font-style: italic;");
+            Label buffDesc = new Label("+3 điểm");
+            buffDesc.setStyle("-fx-font-size: 10px; -fx-text-fill: #555; -fx-font-style: italic;");
 
             buffItemBox.getChildren().addAll(buffIcon, buffCountLabel, useBuffButton, buffDesc);
         } catch (Exception e) {
             System.err.println("Không tải được buff.png: " + e.getMessage());
         }
 
-        // Debuff item box
-        debuffItemBox = new VBox(10);
+        // Debuff item box - COMPACT HƠN
+        debuffItemBox = new VBox(8);
         debuffItemBox.setAlignment(Pos.CENTER);
-        debuffItemBox.setPadding(new Insets(10));
+        debuffItemBox.setPadding(new Insets(8));
         debuffItemBox.setStyle("-fx-background-color: #fadbd8; -fx-border-color: #e74c3c; -fx-border-width: 2; -fx-border-radius: 8; -fx-background-radius: 8;");
 
         try {
             javafx.scene.image.ImageView debuffIcon = new javafx.scene.image.ImageView(
                 new javafx.scene.image.Image(getClass().getResourceAsStream("/com/example/gamesocket/image/debuff.png"))
             );
-            debuffIcon.setFitWidth(60);
-            debuffIcon.setFitHeight(60);
+            debuffIcon.setFitWidth(50); // Giảm từ 60 xuống 50
+            debuffIcon.setFitHeight(50);
             debuffIcon.setPreserveRatio(true);
 
             debuffCountLabel = new Label("x 0");
-            debuffCountLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;");
+            debuffCountLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #e74c3c;");
 
-            Button useDebuffButton = new Button("SỬ DỤNG DEBUFF");
-            useDebuffButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
-            useDebuffButton.setOnMouseEntered(e -> useDebuffButton.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"));
-            useDebuffButton.setOnMouseExited(e -> useDebuffButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;"));
+            Button useDebuffButton = new Button("SỬ DỤNG");
+            useDebuffButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10 5 10;");
+            useDebuffButton.setOnMouseEntered(e -> useDebuffButton.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10 5 10;"));
+            useDebuffButton.setOnMouseExited(e -> useDebuffButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-font-size: 11px; -fx-padding: 5 10 5 10;"));
             useDebuffButton.setOnAction(e -> {
                 if (debuffCount > 0) {
                     sendMessage("USE_DEBUFF");
@@ -938,8 +972,8 @@ public class GameClient extends Application {
                 }
             });
 
-            Label debuffDesc = new Label("-2 điểm cho đối thủ");
-            debuffDesc.setStyle("-fx-font-size: 11px; -fx-text-fill: #555; -fx-font-style: italic;");
+            Label debuffDesc = new Label("-2 điểm đối thủ");
+            debuffDesc.setStyle("-fx-font-size: 10px; -fx-text-fill: #555; -fx-font-style: italic;");
 
             debuffItemBox.getChildren().addAll(debuffIcon, debuffCountLabel, useDebuffButton, debuffDesc);
         } catch (Exception e) {
@@ -948,7 +982,7 @@ public class GameClient extends Application {
 
         itemInventoryBox.getChildren().addAll(inventoryTitle, buffItemBox, debuffItemBox);
         gameLayout.setRight(itemInventoryBox);
-        BorderPane.setMargin(itemInventoryBox, new Insets(0, 10, 0, 10));
+        BorderPane.setMargin(itemInventoryBox, new Insets(0, 5, 0, 5)); // Giảm margin
 
         gamePlayPane = new VBox(gameLayout);
         gamePlayPane.getStyleClass().add("root");
@@ -1058,6 +1092,11 @@ public class GameClient extends Application {
 
             case "OPPONENT_SCORE":
                 handleOpponentScore(data);
+                break;
+
+            case "OPPONENT_GRAIN_CLICK":
+                // Đối phương đã click vào hạt, cần đồng bộ hóa hiển thị
+                handleOpponentGrainClick(data);
                 break;
 
             case "BUFF_ACTIVATED":
@@ -1234,7 +1273,13 @@ public class GameClient extends Application {
         opponent = parts[1];
         int gameDuration = Integer.parseInt(parts[2]);
 
-        createGamePlayUI();
+        // Lấy thông tin vị trí các hạt gạo (nếu có)
+        String ricePositions = "";
+        if (parts.length > 3) {
+            ricePositions = parts[3];
+        }
+
+        createGamePlayUI(ricePositions);
         Scene gameScene = new Scene(gamePlayPane, SCENE_WIDTH, SCENE_HEIGHT);
         gameScene.getStylesheets().add(getClass().getResource("/com/example/gamesocket/styles/styles.css").toExternalForm());
         primaryStage.setScene(gameScene);
@@ -1271,26 +1316,31 @@ public class GameClient extends Application {
         currentScore = Integer.parseInt(parts[2]);
 
         Circle grain = (Circle) grainGrid.getChildren().get(grainIndex);
-        grain.getStyleClass().removeAll("grain-unclicked", "grain-rice", "grain-chaff", "grain-buff", "grain-debuff");
 
         switch (grainType) {
             case "RICE":
-                grain.getStyleClass().add("grain-rice");
+                // Hạt gạo: cộng điểm, hiển thị toast, và ẨN HOÀN TOÀN
+                showToast("✅ Gạo! +1 điểm (Tổng: " + currentScore + ")", "success");
+                grain.setVisible(false); // ẨN hạt gạo thay vì chỉ làm mờ
+                break;
+            case "CHAFF":
+                // Hạt trấu: trừ điểm, hiển thị toast, KHÔNG làm mờ (vẫn click được)
+                showToast("❌ Trấu! -1 điểm (Tổng: " + currentScore + ")", "error");
+                // KHÔNG làm gì với grain - để nguyên màu và có thể click tiếp
                 break;
             case "SCORE_BUFF":
                 grain.getStyleClass().add("grain-buff");
+                grain.setVisible(false); // ẨN buff sau khi nhặt
                 buffCount++;
                 updateInventoryUI();
                 showToast("🎁 Nhặt được Buff! +3 điểm khi dùng", "buff");
                 break;
             case "SCORE_DEBUFF":
                 grain.getStyleClass().add("grain-debuff");
+                grain.setVisible(false); // ẨN debuff sau khi nhặt
                 debuffCount++;
                 updateInventoryUI();
                 showToast("💀 Nhặt được Debuff! Dùng để -2 điểm đối thủ", "error");
-                break;
-            default:
-                grain.getStyleClass().add("grain-chaff");
                 break;
         }
 
@@ -1308,6 +1358,24 @@ public class GameClient extends Application {
         } else {
             opponentScoreLabel.setText("⚔️ Điểm đối thủ: " + score);
         }
+    }
+
+    /**
+     * Xử lý khi đối phương click vào hạt - đồng bộ hóa hiển thị
+     */
+    private void handleOpponentGrainClick(String data) {
+        String[] parts = data.split(",");
+        int grainIndex = Integer.parseInt(parts[0]);
+        String grainType = parts[1];
+
+        // Lấy hạt tương ứng từ grid
+        Circle grain = (Circle) grainGrid.getChildren().get(grainIndex);
+
+        // Đồng bộ hóa hiển thị: nếu là gạo/buff/debuff thì ẩn đi
+        if ("RICE".equals(grainType) || "SCORE_BUFF".equals(grainType) || "SCORE_DEBUFF".equals(grainType)) {
+            grain.setVisible(false); // Ẩn hạt vì đối phương đã nhặt
+        }
+        // Nếu là CHAFF thì không làm gì (để nguyên)
     }
 
     private void handleGameEnded(String data) {
