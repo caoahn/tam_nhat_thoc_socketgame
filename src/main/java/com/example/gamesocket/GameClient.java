@@ -6,9 +6,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Consumer;
@@ -34,11 +38,10 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 
 public class GameClient extends Application {
@@ -72,7 +75,7 @@ public class GameClient extends Application {
     private Label scoreLabel;
     private Label timerLabel;
     private Label opponentScoreLabel;
-    private GridPane grainGrid;
+    private Pane grainGrid;
     private Timer gameTimer;
 
     // Buff/Debuff inventory
@@ -499,7 +502,9 @@ public class GameClient extends Application {
         MenuItem inviteMenuItem = new MenuItem("🎮 Mời chơi");
         MenuItem chatMenuItem = new MenuItem("💬 Nhắn tin");
 
-        userContextMenu.getItems().addAll(inviteMenuItem, chatMenuItem);
+        // userContextMenu.getItems().addAll(inviteMenuItem, chatMenuItem);
+        userContextMenu.getItems().addAll(inviteMenuItem);
+
 
         // BƯỚC 2: Sử dụng setCellFactory để tùy chỉnh từng hàng và gán ContextMenu
         userListView.setCellFactory(lv -> {
@@ -819,20 +824,19 @@ public class GameClient extends Application {
         infoBox.getChildren().addAll(scoreLabel, opponentScoreLabel, timerLabel);
 
         // Hướng dẫn - NGẮN GỌN HƠN
-        Label instructionLabel = new Label("💡 Nhặt GẠO (vàng) +1 điểm • Tránh TRẤU (nâu) -1 điểm");
+        Label instructionLabel = new Label("💡 Nhặt GẠO (vàng) +1 điểm • Tránh THÓC (nâu) -1 điểm");
         instructionLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #8B4513; -fx-font-style: italic;");
         instructionLabel.setWrapText(true);
         instructionLabel.setMaxWidth(800);
 
-        // Game grid - GIẢM SIZE VÀ KHOẢNG CÁCH
-        grainGrid = new GridPane();
-        grainGrid.setAlignment(Pos.CENTER);
-        grainGrid.setHgap(5); // Giảm từ 8 xuống 5
-        grainGrid.setVgap(5); // Giảm từ 8 xuống 5
+        // Game play area
+        grainGrid = new Pane();
+        grainGrid.setPrefSize(1000, 470);
+        grainGrid.setMinSize(1000, 470);
+        grainGrid.setMaxSize(1000, 470);
         grainGrid.getStyleClass().add("game-grid");
-        grainGrid.setPadding(new Insets(5)); // Thêm padding nhỏ
 
-        // Parse vị trí các hạt gạo
+        // Parse rice positions
         java.util.Set<Integer> riceIndexes = new java.util.HashSet<>();
         if (ricePositions != null && !ricePositions.isEmpty()) {
             String[] positions = ricePositions.split(":");
@@ -840,40 +844,79 @@ public class GameClient extends Application {
                 try {
                     riceIndexes.add(Integer.parseInt(pos.trim()));
                 } catch (NumberFormatException e) {
-                    // Bỏ qua nếu parse lỗi
+                    // Ignore parsing errors
                 }
             }
         }
 
-        // Create 100 grain circles - GIẢM SIZE TỪ 22 XUỐNG 18
-        for (int i = 0; i < 100; i++) {
-            Circle grain = new Circle(18); // GIẢM từ 22 xuống 18
-            grain.getStyleClass().add("grain-circle");
+        Random random = new Random();
+        java.util.List<javafx.scene.Node> placedGrains = new java.util.ArrayList<>();
 
-            // Thiết lập màu ngay từ đầu
+        for (int i = 0; i < 100; i++) {
+            javafx.scene.image.ImageView grainImageView;
             if (riceIndexes.contains(i)) {
-                grain.getStyleClass().add("grain-rice"); // Màu vàng - gạo
+                grainImageView = new javafx.scene.image.ImageView(new javafx.scene.image.Image(getClass().getResourceAsStream("/com/example/gamesocket/image/gao.png")));
             } else {
-                grain.getStyleClass().add("grain-chaff"); // Màu nâu - trấu
+                grainImageView = new javafx.scene.image.ImageView(new javafx.scene.image.Image(getClass().getResourceAsStream("/com/example/gamesocket/image/thoc.png")));
             }
+            grainImageView.setFitWidth(80);
+            grainImageView.setFitHeight(80);
+
+            grainImageView.setRotate(random.nextDouble() * 360);
+
+            int tries = 0;
+            boolean overlaps;
+            double x = 0, y = 0;
+            int maxT = 500; 
+
+            do {
+                overlaps = false;
+                x = random.nextDouble() * (grainGrid.getPrefWidth() - 80);
+                y = random.nextDouble() * (grainGrid.getPrefHeight() - 80);
+
+                javafx.geometry.Bounds localBounds = grainImageView.getBoundsInLocal();
+
+                javafx.scene.transform.Rotate rotate = new javafx.scene.transform.Rotate(grainImageView.getRotate(), 40, 40);
+
+                javafx.geometry.Bounds rotatedBounds = rotate.transform(localBounds);
+
+                javafx.geometry.BoundingBox newGrainBoundsInParent = new javafx.geometry.BoundingBox(
+                    x + rotatedBounds.getMinX(),
+                    y + rotatedBounds.getMinY(),
+                    rotatedBounds.getWidth(),
+                    rotatedBounds.getHeight()
+                );
+
+                for (javafx.scene.Node placedGrain : placedGrains) {
+                    if (placedGrain.getBoundsInParent().intersects(newGrainBoundsInParent)) {
+                        overlaps = true;
+                        break;
+                    }
+                }
+
+                tries++;
+            } while (overlaps && tries < maxT);
+
+            grainImageView.setLayoutX(x);
+            grainImageView.setLayoutY(y);
+
 
             final int grainIndex = i;
             final boolean isRice = riceIndexes.contains(i);
 
-            grain.setOnMouseClicked(e -> {
+            grainImageView.setOnMouseClicked(e -> {
                 if (currentGameId != null) {
                     sendMessage("GAME_ACTION:" + grainIndex);
 
-                    // Nếu là gạo thì disable (biến mất)
-                    // Nếu là trấu thì KHÔNG disable (vẫn click được)
                     if (isRice) {
-                        grain.setDisable(true);
-                        grain.setOpacity(0.3); // Làm mờ khi đã click
+                        grainImageView.setDisable(true);
+                        grainImageView.setOpacity(0.3); 
                     }
                 }
             });
 
-            grainGrid.add(grain, i % 10, i / 10);
+            grainGrid.getChildren().add(grainImageView);
+            placedGrains.add(grainImageView);
         }
 
         // Quit button - COMPACT HƠN
@@ -1315,7 +1358,7 @@ public class GameClient extends Application {
         String grainType = parts[1];
         currentScore = Integer.parseInt(parts[2]);
 
-        Circle grain = (Circle) grainGrid.getChildren().get(grainIndex);
+        javafx.scene.image.ImageView grain = (javafx.scene.image.ImageView) grainGrid.getChildren().get(grainIndex);
 
         switch (grainType) {
             case "RICE":
@@ -1324,19 +1367,20 @@ public class GameClient extends Application {
                 grain.setVisible(false); // ẨN hạt gạo thay vì chỉ làm mờ
                 break;
             case "CHAFF":
-                // Hạt trấu: trừ điểm, hiển thị toast, KHÔNG làm mờ (vẫn click được)
-                showToast("❌ Trấu! -1 điểm (Tổng: " + currentScore + ")", "error");
+                // Hạt trấu: trừ điểm, hiển thị toast
+                showToast("❌ Thóc! -1 điểm (Tổng: " + currentScore + ")", "error");
+                grain.setVisible(false);
                 // KHÔNG làm gì với grain - để nguyên màu và có thể click tiếp
                 break;
             case "SCORE_BUFF":
-                grain.getStyleClass().add("grain-buff");
+                grain.setImage(new javafx.scene.image.Image(getClass().getResourceAsStream("/com/example/gamesocket/image/buff.png")));
                 grain.setVisible(false); // ẨN buff sau khi nhặt
                 buffCount++;
                 updateInventoryUI();
                 showToast("🎁 Nhặt được Buff! +3 điểm khi dùng", "buff");
                 break;
             case "SCORE_DEBUFF":
-                grain.getStyleClass().add("grain-debuff");
+                grain.setImage(new javafx.scene.image.Image(getClass().getResourceAsStream("/com/example/gamesocket/image/debuff.png")));
                 grain.setVisible(false); // ẨN debuff sau khi nhặt
                 debuffCount++;
                 updateInventoryUI();
@@ -1369,7 +1413,7 @@ public class GameClient extends Application {
         String grainType = parts[1];
 
         // Lấy hạt tương ứng từ grid
-        Circle grain = (Circle) grainGrid.getChildren().get(grainIndex);
+        javafx.scene.image.ImageView grain = (javafx.scene.image.ImageView) grainGrid.getChildren().get(grainIndex);
 
         // Đồng bộ hóa hiển thị: nếu là gạo/buff/debuff thì ẩn đi
         if ("RICE".equals(grainType) || "SCORE_BUFF".equals(grainType) || "SCORE_DEBUFF".equals(grainType)) {
@@ -1529,6 +1573,28 @@ public class GameClient extends Application {
         TableColumn<MatchHistoryEntry, String> dateCol = new TableColumn<>("Ngày giờ");
         dateCol.setCellValueFactory(new PropertyValueFactory<>("playedAt"));
         dateCol.setPrefWidth(180);
+        dateCol.setStyle("-fx-alignment: CENTER;");
+
+        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.S");
+        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
+
+        dateCol.setCellFactory(column -> new TableCell<MatchHistoryEntry, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    try {
+                        LocalDateTime dateTime = LocalDateTime.parse(item, inputFormatter);
+                        setText(dateTime.format(outputFormatter));
+                    } catch (DateTimeParseException e) {
+                        System.err.println("Lỗi định dạng thời gian: " + item);
+                        setText("Lỗi định dạng"); 
+                    }
+                }
+            }
+        });
 
         tableView.getColumns().addAll(opponentCol, resultCol, myScoreCol, oppScoreCol, durationCol, dateCol);
 
