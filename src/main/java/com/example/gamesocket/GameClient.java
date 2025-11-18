@@ -824,7 +824,7 @@ public class GameClient extends Application {
         infoBox.getChildren().addAll(scoreLabel, opponentScoreLabel, timerLabel);
 
         // Hướng dẫn - NGẮN GỌN HƠN
-        Label instructionLabel = new Label("💡 Nhặt GẠO (vàng) +1 điểm • Tránh THÓC (nâu) -1 điểm");
+        Label instructionLabel = new Label("💡 Nhặt GẠO (trắng) +1 điểm • Tránh THÓC (nâu) -1 điểm");
         instructionLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #8B4513; -fx-font-style: italic;");
         instructionLabel.setWrapText(true);
         instructionLabel.setMaxWidth(800);
@@ -1364,26 +1364,60 @@ public class GameClient extends Application {
 
         switch (grainType) {
             case "RICE":
-                // Hạt gạo: cộng điểm, hiển thị toast, và ẨN HOÀN TOÀN
+                // Hạt gạo thuần: cộng 1 điểm
                 showToast("✅ Gạo! +1 điểm (Tổng: " + currentScore + ")", "success");
-                grain.setVisible(false); // ẨN hạt gạo thay vì chỉ làm mờ
+                grain.setVisible(false);
                 break;
+
+            case "RICE_BUFF":
+                // Hạt gạo + buff: cộng 1 điểm (gạo), thu thập buff vào inventory
+                buffCount++;
+                updateInventoryUI();
+                showToast("✨ Gạo + Buff! +1 điểm, nhận 1 buff (Tổng: " + currentScore + ")", "buff");
+                grain.setVisible(false);
+                break;
+
+            case "RICE_DEBUFF":
+                // Hạt gạo + debuff: cộng 1 điểm (gạo), thu thập debuff vào inventory
+                debuffCount++;
+                updateInventoryUI();
+                showToast("⚡ Gạo + Debuff! +1 điểm, nhận 1 debuff (Tổng: " + currentScore + ")", "success");
+                grain.setVisible(false);
+                break;
+
             case "CHAFF":
-                // Hạt trấu: trừ điểm, hiển thị toast
+                // Hạt trấu thuần: trừ 1 điểm
                 showToast("❌ Thóc! -1 điểm (Tổng: " + currentScore + ")", "error");
                 grain.setVisible(false);
-                // KHÔNG làm gì với grain - để nguyên màu và có thể click tiếp
                 break;
+
+            case "CHAFF_BUFF":
+                // Hạt trấu + buff: trừ 1 điểm (trấu), thu thập buff vào inventory
+                buffCount++;
+                updateInventoryUI();
+                showToast("🎁 Thóc + Buff! -1 điểm, nhưng nhận 1 buff (Tổng: " + currentScore + ")", "buff");
+                grain.setVisible(false);
+                break;
+
+            case "CHAFF_DEBUFF":
+                // Hạt trấu + debuff: trừ 1 điểm (trấu), thu thập debuff vào inventory
+                debuffCount++;
+                updateInventoryUI();
+                showToast("💀 Thóc + Debuff! -1 điểm, nhưng nhận 1 debuff (Tổng: " + currentScore + ")", "error");
+                grain.setVisible(false);
+                break;
+
             case "SCORE_BUFF":
-                grain.setImage(new javafx.scene.image.Image(getClass().getResourceAsStream("/com/example/gamesocket/image/buff.png")));
-                grain.setVisible(false); // ẨN buff sau khi nhặt
+                // Buff thuần (không còn dùng nữa vì buff luôn đi kèm gạo/thóc)
+                grain.setVisible(false);
                 buffCount++;
                 updateInventoryUI();
                 showToast("🎁 Nhặt được Buff! +3 điểm khi dùng", "buff");
                 break;
+
             case "SCORE_DEBUFF":
-                grain.setImage(new javafx.scene.image.Image(getClass().getResourceAsStream("/com/example/gamesocket/image/debuff.png")));
-                grain.setVisible(false); // ẨN debuff sau khi nhặt
+                // Debuff thuần (không còn dùng nữa vì debuff luôn đi kèm gạo/thóc)
+                grain.setVisible(false);
                 debuffCount++;
                 updateInventoryUI();
                 showToast("💀 Nhặt được Debuff! Dùng để -2 điểm đối thủ", "error");

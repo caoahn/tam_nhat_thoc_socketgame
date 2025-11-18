@@ -4,10 +4,11 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class GameSession {
-    private enum ItemType { RICE, CHAFF, SCORE_BUFF, SCORE_DEBUFF }
-    private static final int TOTAL_GRAINS = 100;  // Tăng từ 70 lên 100 hạt
+    private enum GrainType { RICE, CHAFF }
+    private enum PowerupType { NONE, SCORE_BUFF, SCORE_DEBUFF }
+    private static final int TOTAL_GRAINS = 100;
     private static final int TARGET_RICE = 50;
-    private static final int GAME_DURATION = 50; // seconds
+    private static final int GAME_DURATION = 100; // seconds
 
     private String gameId;
     private String player1;
@@ -16,14 +17,15 @@ public class GameSession {
 
     private Map<String, Integer> playerScores;
     private Map<String, Set<Integer>> playerClicks;
-    private ItemType[] itemTypes;
+    private GrainType[] grainTypes; // Mảng lưu loại hạt (gạo/thóc)
+    private PowerupType[] powerupTypes; // Mảng lưu loại power-up (buff/debuff/none)
     private Timer gameTimer;
     private long gameStartTime;
     private boolean gameEnded;
 
     // Biến mới: Theo dõi các hạt gạo đã được nhặt
-    private int totalRiceCount = 0; // Tổng số hạt gạo trong game
-    private Set<Integer> allRiceClickedPositions; // Các vị trí hạt gạo đã được nhặt bởi bất kỳ ai
+    private int totalRiceCount = 0;
+    private Set<Integer> allRiceClickedPositions;
 
     public GameSession(String gameId, String player1, String player2, GameServer server) {
         this.gameId = gameId;
@@ -45,48 +47,50 @@ public class GameSession {
     }
 
     private void initializeItems() {
-        itemTypes = new ItemType[TOTAL_GRAINS];
-        Arrays.fill(itemTypes, ItemType.CHAFF); // Default to chaff
+        grainTypes = new GrainType[TOTAL_GRAINS];
+        powerupTypes = new PowerupType[TOTAL_GRAINS];
+        Arrays.fill(grainTypes, GrainType.CHAFF); // Default to chaff
+        Arrays.fill(powerupTypes, PowerupType.NONE); // Default to no powerup
         Random random = new Random();
 
         // TÍNH TOÁN: 100 hạt tổng cộng
         // - 67 hạt gạo (2/3 của 100 hạt)
-        // - 5 buff
-        // - 3 debuff
-        // = 75 hạt đặc biệt
-        // => Còn lại 25 hạt trấu
+        // - 33 hạt trấu
+        // - 5 buff (có thể nằm ở bất kỳ hạt nào, kể cả hạt gạo)
+        // - 3 debuff (có thể nằm ở bất kỳ hạt nào, kể cả hạt gạo)
 
-        // Place rice - ĐẶT 67 HẠT GẠO (2/3 tổng số hạt)
-        Set<Integer> positions = new HashSet<>();
-        int numRice = 67; // 2/3 của 100 hạt
+        // Place rice - ĐẶT 67 HẠT GẠO
+        Set<Integer> ricePositions = new HashSet<>();
+        int numRice = 67;
         for (int i = 0; i < numRice; i++) {
             int pos;
             do {
                 pos = random.nextInt(TOTAL_GRAINS);
-            } while (positions.contains(pos));
-            positions.add(pos);
-            itemTypes[pos] = ItemType.RICE;
-            totalRiceCount++; // Đếm tổng số hạt gạo
+            } while (ricePositions.contains(pos));
+            ricePositions.add(pos);
+            grainTypes[pos] = GrainType.RICE;
+            totalRiceCount++;
         }
 
-        // Place score buffs - 5 hạt
+        // Place score buffs - 5 hạt (có thể nằm ở BẤT KỲ vị trí nào, kể cả hạt gạo)
+        Set<Integer> powerupPositions = new HashSet<>();
         for (int i = 0; i < 5; i++) {
             int pos;
             do {
                 pos = random.nextInt(TOTAL_GRAINS);
-            } while (positions.contains(pos));
-            positions.add(pos);
-            itemTypes[pos] = ItemType.SCORE_BUFF;
+            } while (powerupPositions.contains(pos));
+            powerupPositions.add(pos);
+            powerupTypes[pos] = PowerupType.SCORE_BUFF;
         }
 
-        // Place score debuffs - 3 hạt
+        // Place score debuffs - 3 hạt (có thể nằm ở BẤT KỲ vị trí nào, kể cả hạt gạo)
         for (int i = 0; i < 3; i++) {
             int pos;
             do {
                 pos = random.nextInt(TOTAL_GRAINS);
-            } while (positions.contains(pos));
-            positions.add(pos);
-            itemTypes[pos] = ItemType.SCORE_DEBUFF;
+            } while (powerupPositions.contains(pos));
+            powerupPositions.add(pos);
+            powerupTypes[pos] = PowerupType.SCORE_DEBUFF;
         }
     }
 
@@ -98,10 +102,10 @@ public class GameSession {
         ClientHandler client2 = server.getOnlineClients().get(player2);
 
         if (client1 != null && client2 != null) {
-            // Tạo chuỗi chứa thông tin vị trí các hạt gạo và trấu
+            // Tạo chuỗi chứa thông tin vị trí các hạt gạo
             StringBuilder grainPositions = new StringBuilder();
             for (int i = 0; i < TOTAL_GRAINS; i++) {
-                if (itemTypes[i] == ItemType.RICE) {
+                if (grainTypes[i] == GrainType.RICE) {
                     grainPositions.append(i).append(":");
                 }
             }
@@ -136,87 +140,86 @@ public class GameSession {
             return;
         }
 
-        ItemType itemType = itemTypes[grainIndex];
+        GrainType grainType = grainTypes[grainIndex];
+        PowerupType powerupType = powerupTypes[grainIndex];
         ClientHandler client = server.getOnlineClients().get(player);
         String opponent = player.equals(player1) ? player2 : player1;
         ClientHandler opponentClient = server.getOnlineClients().get(opponent);
 
-        // Chỉ kiểm tra đã click nếu là hạt gạo (vì gạo sẽ biến mất)
         Set<Integer> playerClickSet = playerClicks.get(player);
 
-        if (itemType == ItemType.RICE) {
-            // Hạt gạo: kiểm tra đã click chưa, nếu rồi thì return
-            if (playerClickSet.contains(grainIndex)) {
+        // Biến theo dõi điểm số
+        int currentScore = playerScores.get(player);
+        boolean hasClicked = playerClickSet.contains(grainIndex);
+
+        // Xử lý hạt gạo/thóc
+        if (grainType == GrainType.RICE) {
+            // Hạt gạo: kiểm tra đã click chưa
+            if (hasClicked) {
                 return; // Already clicked
             }
             playerClickSet.add(grainIndex);
-            allRiceClickedPositions.add(grainIndex); // Thêm vào tập hợp các hạt gạo đã được nhặt
+            allRiceClickedPositions.add(grainIndex);
 
-            // Cộng điểm
-            int newScore = playerScores.get(player) + 1;
-            playerScores.put(player, newScore);
-            if (client != null) {
-                client.sendMessage("GRAIN_RESULT:" + grainIndex + ",RICE," + newScore);
-            }
-            // GỬI CẢ ĐIỂM SỐ VÀ THÔNG TIN HẠT CHO ĐỐI PHƯƠNG
-            if (opponentClient != null) {
-                opponentClient.sendMessage("OPPONENT_GRAIN_CLICK:" + grainIndex + ",RICE");
-                opponentClient.sendMessage("OPPONENT_SCORE:" + player + "," + newScore);
-            }
+            // Cộng 1 điểm cho hạt gạo
+            currentScore += 1;
+            playerScores.put(player, currentScore);
 
-            // KIỂM TRA ĐIỀU KIỆN KẾT THÚC GAME
-            // 1. Nếu người chơi đạt 20 điểm -> Thắng ngay
-            if (newScore >= TARGET_RICE) {
-                endGame(player);
-                return;
+        } else if (grainType == GrainType.CHAFF) {
+            // Hạt trấu: KHÔNG kiểm tra đã click nếu KHÔNG có powerup
+            // Nếu có powerup thì chỉ click được 1 lần
+            if (powerupType != PowerupType.NONE) {
+                if (hasClicked) {
+                    return; // Đã click hạt có powerup rồi
+                }
+                playerClickSet.add(grainIndex);
             }
 
-            // 2. Nếu tất cả hạt gạo đã được nhặt hết -> Người có điểm cao hơn thắng
-            if (allRiceClickedPositions.size() >= totalRiceCount) {
-                endGameAllRiceCollected();
-                return;
-            }
-        } else if (itemType == ItemType.CHAFF) {
-            // Hạt trấu: KHÔNG kiểm tra đã click, cho phép click nhiều lần
-            // Mỗi lần click trừ 1 điểm
-            int newScore = playerScores.get(player) - 1;
-            if (newScore < 0) newScore = 0;
-            playerScores.put(player, newScore);
+            // Trừ 1 điểm cho hạt trấu
+            currentScore -= 1;
+            if (currentScore < 0) currentScore = 0;
+            playerScores.put(player, currentScore);
+        }
 
-            if (client != null) {
-                client.sendMessage("GRAIN_RESULT:" + grainIndex + ",CHAFF," + newScore);
-            }
-            // GỬI THÔNG BÁO CHO ĐỐI PHƯƠNG VỀ VIỆC HẠT TRẤU ĐÃ ĐƯỢC CLICK
-            if (opponentClient != null) {
-                opponentClient.sendMessage("OPPONENT_GRAIN_CLICK:" + grainIndex + ",CHAFF");
-                opponentClient.sendMessage("OPPONENT_SCORE:" + player + "," + newScore);
-            }
-        } else if (itemType == ItemType.SCORE_BUFF) {
-            // Buff: chỉ cho phép nhặt 1 lần
-            if (playerClickSet.contains(grainIndex)) {
-                return;
-            }
-            playerClickSet.add(grainIndex);
+        // Xử lý buff/debuff (nếu có) - CHỈ THU THẬP VÀO INVENTORY
+        if (powerupType == PowerupType.SCORE_BUFF) {
+            // Buff: Không tự động kích hoạt, chỉ thu thập vào inventory
+            // (Điểm số không thay đổi ở đây)
 
-            if (client != null) {
-                client.sendMessage("GRAIN_RESULT:" + grainIndex + ",SCORE_BUFF," + playerScores.get(player));
-            }
-            if (opponentClient != null) {
-                opponentClient.sendMessage("OPPONENT_GRAIN_CLICK:" + grainIndex + ",SCORE_BUFF");
-            }
-        } else if (itemType == ItemType.SCORE_DEBUFF) {
-            // Debuff: chỉ cho phép nhặt 1 lần
-            if (playerClickSet.contains(grainIndex)) {
-                return;
-            }
-            playerClickSet.add(grainIndex);
+        } else if (powerupType == PowerupType.SCORE_DEBUFF) {
+            // Debuff: Không tự động kích hoạt, chỉ thu thập vào inventory
+            // (Điểm số đối thủ không thay đổi ở đây)
+        }
 
-            if (client != null) {
-                client.sendMessage("GRAIN_RESULT:" + grainIndex + ",SCORE_DEBUFF," + playerScores.get(player));
-            }
-            if (opponentClient != null) {
-                opponentClient.sendMessage("OPPONENT_GRAIN_CLICK:" + grainIndex + ",SCORE_DEBUFF");
-            }
+        // Gửi kết quả cho người chơi
+        String resultType = grainType == GrainType.RICE ? "RICE" : "CHAFF";
+        if (powerupType == PowerupType.SCORE_BUFF) {
+            resultType += "_BUFF";
+        } else if (powerupType == PowerupType.SCORE_DEBUFF) {
+            resultType += "_DEBUFF";
+        }
+
+        if (client != null) {
+            client.sendMessage("GRAIN_RESULT:" + grainIndex + "," + resultType + "," + currentScore);
+        }
+
+        // Gửi thông tin cho đối phương
+        if (opponentClient != null) {
+            opponentClient.sendMessage("OPPONENT_GRAIN_CLICK:" + grainIndex + "," + resultType);
+            opponentClient.sendMessage("OPPONENT_SCORE:" + player + "," + currentScore);
+        }
+
+        // KIỂM TRA ĐIỀU KIỆN KẾT THÚC GAME
+        // 1. Nếu người chơi đạt 50 điểm -> Thắng ngay
+        if (currentScore >= TARGET_RICE) {
+            endGame(player);
+            return;
+        }
+
+        // 2. Nếu tất cả hạt gạo đã được nhặt hết -> Người có điểm cao hơn thắng
+        if (allRiceClickedPositions.size() >= totalRiceCount) {
+            endGameAllRiceCollected();
+            return;
         }
     }
 

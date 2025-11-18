@@ -20,7 +20,7 @@ public class GameServer {
     private static final int PORT = 8888;
     private static final String DB_URL = "jdbc:mysql://localhost:3306/rice_game";
     private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "root";
+    private static final String DB_PASSWORD = "123456";
 
     private ServerSocket serverSocket;
     private Map<String, ClientHandler> onlineClients;
